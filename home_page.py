@@ -1,6 +1,8 @@
 import customtkinter as ctk
 from base_page import MakeBasePage
+from enum import Enum, auto
 import constants
+from recording_state import RecordingState
 
 """
 CURRENT PROB: After I save or clear the first file all of the "disableds" are turned off. I'm able to click the pause, stop, save, and clear buttons. 
@@ -12,6 +14,46 @@ After saving or clearing a file the page should return to the default original s
 
 # This describes inheritance
 class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
+
+    HOMEPAGE_BUTTON_CONFIG = { 
+        RecordingState.RECORDING: { 
+            "record_btn": {"fg_color": "#E74C3C", "state": "disabled", "text_color_disabled": "white"},
+            "pause_btn": {"fg_color": "#1F6AA5", "state": "normal", "hover": True},
+            "stop_btn": {"fg_color": "#1F6AA5", "state": "normal", "hover": True},
+            "output_btn": {"text": "● Recording", "font": constants.OUTPUT_BTN_FONT, "fg_color": "#E74C3C", "hover": False}
+        },
+        RecordingState.PAUSED: { 
+            "record_btn": {"fg_color": "#1F6AA5", "state": "normal", "hover": True},
+            "pause_btn": {"fg_color": "#FFB100", "state": "disabled", "text_color_disabled": "white"},
+            "output_btn": {"text": "⏸Paused", "font": constants.OUTPUT_BTN_FONT, "fg_color": "#FFB100", "hover": False}
+        },
+        RecordingState.STOPPED: { 
+            "record_btn": {"fg_color": "#1F6AA5", "state": "disabled", "text_color_disabled": "white"},
+            "pause_btn": {"fg_color": "#1F6AA5", "state": "disabled", "text_color_disabled": "white"},
+            "stop_btn": {"fg_color": "#374151", "state": "disabled", "text_color_disabled": "white"},
+            "output_btn": {"text": "⏹ Stopped", "font": constants.OUTPUT_BTN_FONT, "fg_color": "#374151", "hover": False},
+            "save_btn": {"state": "normal"},
+            "clear_btn": {"state": "normal"}
+        },
+        RecordingState.SAVED: { 
+            "record_btn": {"fg_color": "#1F6AA5", "state": "normal"},
+            "pause_btn": {"fg_color": "#1F6AA5", "state": "disabled", "text_color_disabled": "white"},
+            "stop_btn": {"fg_color": "#1F6AA5", "state": "disabled", "text_color_disabled": "white"},
+            "output_btn": {"text": None, "fg_color": "#184669", "state": "disabled", "text_color_disabled": "white"},
+            "save_btn": {"state": "disabled", "text_color_disabled": "white"},
+            "clear_btn": {"state": "disabled", "text_color_disabled": "white"}
+        }, 
+        RecordingState.CLEARED: { 
+            "record_btn": {"fg_color": "#1F6AA5", "state": "normal"},
+            "pause_btn": {"fg_color": "#1F6AA5", "state": "disabled", "text_color_disabled": "white"},
+            "stop_btn": {"fg_color": "#1F6AA5", "state": "disabled", "text_color_disabled": "white"},
+            "output_btn": {"text": None, "fg_color": "#184669", "state": "disabled", "text_color_disabled": "white"},
+            "save_btn": {"state": "disabled", "text_color_disabled": "white"},
+            "clear_btn": {"state": "disabled", "text_color_disabled": "white"}
+        }
+
+    }
+    
     # This is what info needed when this class is built as an object
     # making an object HomePage(content)
     def __init__(self, content, controller):
@@ -79,6 +121,7 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
             font=("Arial", 18),
             command=command, # Each button has dif commmand; impacts the output button
             state=state,
+            hover=True,
             text_color_disabled="white",
             width=46,
             height=36,
@@ -103,121 +146,36 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
         btn.grid(row=0, column=column)
         return btn
 
-    def on_click_record(self): 
-        self.record_btn.configure(
-            fg_color="#E74C3C",
-            hover=False,
-            state="disabled",
-            text_color_disabled="white"
-        )
-        self.pause_btn.configure(
-            fg_color="#1F6AA5",
-            state="normal",
-            hover=True,
-        )
-        self.stop_btn.configure(
-            fg_color="#1F6AA5",
-            state="normal",
-            hover=True,
-        )
+    def set_state(self, new_state: RecordingState): 
+        self.state = new_state
+        config = self.HOMEPAGE_BUTTON_CONFIG[new_state] 
+        for btn_name, kwargs in config.items(): 
+            getattr(self, btn_name).configure(**kwargs)
 
-        self.output_btn.configure(
-        text="● Recording", 
-        font=("Arial", 14, "bold"),
-        fg_color = "#E74C3C",
-        hover=False,
-        )
+    def on_click_record(self): 
+        self.set_state(RecordingState.RECORDING)
 
     def on_click_pause(self):
-        self.pause_btn.configure(
-            fg_color="#FFB100",
-            hover=False,
-            state = "disable",
-            text_color_disabled = "white",
-        )
-        self.record_btn.configure(
-            fg_color="#1F6AA5",
-            state="normal",
-            hover=True
-        )
-        self.output_btn.configure(
-            text="⏸Paused",
-            font=("Arial", 14, "bold"),
-            fg_color = "#FFB100",
-            hover=False,
-        )
+        self.set_state(RecordingState.PAUSED)
 
     def on_click_stop(self):
-        self.stop_btn.configure(
-            fg_color="#374151",
-            hover=False,
-            state="disable",
-            text_color_disabled = "white",
-        )
-        self.record_btn.configure(
-            fg_color="#1F6AA5",
-            state="disabled",
-            text_color_disabled="white"
-        )
-        self.pause_btn.configure(
-            fg_color="#1F6AA5",
-            state="disabled",
-            text_color_disabled="white"
-        )
-        self.output_btn.configure(
-            text="⏹ Stopped",
-            font=("Arial", 14, "bold"),
-            fg_color = "#374151",
-            hover=False,
-        )
-        self.save_btn.configure(
-            state="normal"
-        )
-        self.clear_btn.configure(
-            state="normal"
-        )
+        self.set_state(RecordingState.STOPPED)
 
     def on_click_save(self): 
-        self.stop_btn.configure(
-            fg_color="#1F6AA5",
-            state="normal"
-        )
-        self.record_btn.configure(
-            fg_color="#1F6AA5",
-            state="normal"
-        )
-        self.pause_btn.configure(
-            fg_color="#1F6AA5",
-            state="normal"
-        )
-        self.output_btn.configure(
-            text=None,
-            fg_color="#184669",
-            state="disabled",
-            text_color_disabled="white",
-            hover=False,
-        )
+        self.set_state(RecordingState.SAVED)
 
     def on_click_clear(self): 
-        self.stop_btn.configure(
-            fg_color="#1F6AA5",
-            state="normal"
-        )
-        self.record_btn.configure(
-            fg_color="#1F6AA5",
-            state="normal"
-        )
-        self.pause_btn.configure(
-            fg_color="#1F6AA5",
-            state="normal"
-        )
-        self.output_btn.configure(
-            text=None,
-            fg_color="#184669",
-            state="disabled",
-            text_color_disabled="white",
-            hover=False,
-        )
+        self.set_state(RecordingState.CLEARED)
+
+
+
+
+
+
+
+ 
+
+
 
 
     

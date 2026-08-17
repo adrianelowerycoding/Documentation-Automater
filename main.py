@@ -26,6 +26,24 @@ class App(ctk.CTk):
 
         # The root window has 2 frames/containers: sidebar and content
 
+        # -- Content area -- contains ALL pages
+        self.content = ctk.CTkFrame(self)
+        self.content.grid(row=0, column=1, sticky="nsew")
+        # Configures each page frame to stretch to fill container
+        self.content.grid_rowconfigure(0, weight=1)
+        self.content.grid_columnconfigure(0, weight=1)
+
+        # Persistent Toggle Button (Stays visible in the main view)
+        self.toggle_btn = ctk.CTkButton(
+            self.content, 
+            text="☰", 
+            width=40, 
+            height=40, 
+            command=self.toggle_sidebar,
+            font=("Arial", 18)
+        )
+        self.toggle_btn.grid(row = 0, column = 0, sticky="nw", pady=10, padx=10, )
+
         # -- Sidebar Frame
         if ctk.get_appearance_mode() == "Dark":
             self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0, fg_color = constants.DARK_FG_COLOR)
@@ -50,24 +68,6 @@ class App(ctk.CTk):
         self.make_sidebar_button("Instructions", lambda: self.show_page(InstructionsPage))
         self.make_sidebar_button("Default Keybinds", lambda: self.show_page(DefaultKeybindsPage))
         self.make_sidebar_button("Profile Settings", lambda: self.show_page(ProfileSettingsPage))
-
-        # -- Content area -- contains ALL pages
-        self.content = ctk.CTkFrame(self)
-        self.content.grid(row=0, column=1, sticky="nsew")
-        # Configures each page frame to stretch to fill container
-        self.content.grid_rowconfigure(0, weight=1)
-        self.content.grid_columnconfigure(0, weight=1)
-
-        # Persistent Toggle Button (Stays visible in the main view)
-        self.toggle_btn = ctk.CTkButton(
-            self.content, 
-            text="☰", 
-            width=40, 
-            height=40, 
-            command=self.toggle_sidebar,
-            font=("Arial", 18)
-        )
-        self.toggle_btn.grid(row = 0, column = 0, sticky="nw", pady=10, padx=10, )
        
         # Building a dictionary of page instances 
         self.pages= {} 
