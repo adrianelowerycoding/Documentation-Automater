@@ -1,0 +1,11 @@
+To-Do: 
+
+	- Put all clickers and handlers in one class in "UserInput" file
+	- 
+	- Compress cv2Test into one function in Clicker class - 8/8/26
+	- Find out how to create custom profiles w/ SQLite; will probably have to re-type
+	and rethink current binding_screenshot_key as it currently is. - 8/8/26
+
+Completed: 
+
+Parking Lot:

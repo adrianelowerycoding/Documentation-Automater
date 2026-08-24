@@ -1,0 +1,11 @@
+8 - 8 - 26 
+
+Now: 
+
+	- Compress cv2Test into one function
+
+Next: 
+
+Questions: 
+
+Challenges Faced: 

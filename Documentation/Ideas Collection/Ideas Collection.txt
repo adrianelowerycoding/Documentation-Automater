@@ -1,0 +1,25 @@
+Ideas/Additions: 
+
+    - tkinter file explorer window to choose save folder for screenshots 
+    - If user has not selected a profile to use whenever they start up the program, then 
+    you just use the default settings; no custom keybinds allowed. They are only able to make
+    custom keybinds if they select it in the profile menu.
+
+Proposed Ideas/Additions:
+
+
+Accepted Ideas: 
+
+
+Rejected Ideas: 
+
+
+Maybe Ideas:
+
+
+Cutbacks/Save for future versions: 
+
+Cutbacks: Shortened:
+
+
+Cutbacks: Full Explanation: 
