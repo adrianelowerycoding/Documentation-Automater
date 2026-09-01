@@ -20,7 +20,7 @@ class UserInput:
         top_left_corner = []
         bottom_right_corner = []
         rectDrawn = False
-        image = cv2.imread(rf"C:\Users\adria\OneDrive\Documents\Coding\Python\Big Projects\Documentation Automater\Screenshots\waldo.png")
+        image = cv2.imread(rf"C:\Users\adria\OneDrive\Documents\Coding\Python\Big Projects\Documentation Automater\Documentation-Automer-\Screenshots\waldo.png")
         tempImage = image.copy()
 
         # function which will be called on mouse input

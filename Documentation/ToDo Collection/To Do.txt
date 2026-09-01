@@ -5,6 +5,16 @@ To-Do:
 	- Compress cv2Test into one function in Clicker class - 8/8/26
 	- Find out how to create custom profiles w/ SQLite; will probably have to re-type
 	and rethink current binding_screenshot_key as it currently is. - 8/8/26
+	
+	User Profiles: 
+	- Create a SQL Lite database 
+	- Before creating database first decide what actions you want custom keybinds for, aka
+	what actions there will be. 
+
+	Screenshot Window: 
+	- make each window a class
+	- make the classes interact with eachother; both run at the same time.
+	- Add shape drawing and screenshot capturing inside shapes. 
 
 Completed: 
 

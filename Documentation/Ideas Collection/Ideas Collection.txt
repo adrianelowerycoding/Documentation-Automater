@@ -1,15 +1,29 @@
-Ideas/Additions: 
+Proposed Ideas/Additions:
 
     - tkinter file explorer window to choose save folder for screenshots 
     - If user has not selected a profile to use whenever they start up the program, then 
     you just use the default settings; no custom keybinds allowed. They are only able to make
     custom keybinds if they select it in the profile menu.
 
-Proposed Ideas/Additions:
+
+    - Edit Menu: 
+        - Add sketching as an edit option for screenshots.
+
+    - Screenshot Window: 
+        - Save screenshot of the selected area with a button release command: 
+        Canvas.bind("<ButtonRelease-1>", on_button_release)
 
 
 Accepted Ideas: 
 
+   - Create an ultra-compliant enterprise version that can be used at a majority of work places.
+        - No key logging, only GUI clicking. 
+        - Still allow voice transcription since whisper is safe and it's a core component to 
+        automating documenation.
+        - Don't include mouse element capture (like in Steps Recorder)
+        - Replace SQL lite database for user profiles with json file for project files.
+            - Project file remembers path to save documentation for each project.
+        - Remove custom keybinds for user profile
 
 Rejected Ideas: 
 
@@ -20,6 +34,5 @@ Maybe Ideas:
 Cutbacks/Save for future versions: 
 
 Cutbacks: Shortened:
-
 
 Cutbacks: Full Explanation: 
