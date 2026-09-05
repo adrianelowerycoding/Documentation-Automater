@@ -1,0 +1,11 @@
+Challenges; 
+
+All-Time: 
+
+   Tkinter: 
+        - Scaling issue. Windows show up in different spots 
+        when the monitor scaling changes from 100%. Makes it 
+        hard to force the same look on both PCs and laptops.
+
+        - Dropdown button menu to Main Menu. Way more complicated than I thought.
+
