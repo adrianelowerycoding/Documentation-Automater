@@ -1,3 +1,9 @@
+"""
+This test proves how both MainSideMenu and DropdownButton classes can work together and produce
+the desired button bar and dropdown buttons and dropdown menus.
+"""
+
+
 import ctypes
 import os
 import customtkinter as ctk
@@ -14,99 +20,14 @@ except Exception as e:
     print("shcore failed:", e)
 
 
-GUI_DIR = os.path.dirname(os.path.abspath(__file__))
-ASSETS_DIR = os.path.join(GUI_DIR, "..", "Assets")
+GUI_TEST_DIR = os.path.dirname(os.path.abspath(__file__))
+print(GUI_TEST_DIR)
+ASSETS_DIR = os.path.join(GUI_TEST_DIR, "..", "..","Assets")
 HEADING_ICON_PATH = os.path.join(ASSETS_DIR, "Heading_icon.png")
 ITALICS_ICON_PATH = os.path.join(ASSETS_DIR, "Italics_icon.png")
 CAMERA_ICON_PATH = os.path.join(ASSETS_DIR, "Camera_icon.png")
-
-
-class DropdownButton(ctk.CTkFrame):
-    """
-    A self-contained, reusable dropdown widget: one CTkButton that shows
-    the current selection, plus a hideable frame of option buttons.
-    Clicking an option updates the main button's text and, if a callback
-    was provided, hands the selection up to whoever created this widget.
-
-    This class knows nothing about headings, bullets, or MainSideMenu --
-    it only knows "a label maps to something to run when picked." That's
-    what keeps it reusable across every dropdown you add later.
-    """
-
-    def __init__(self, parent, options, default_text="Select an option", callback=None, **kwargs):
-        # parent          - the widget this dropdown lives inside (button_bar, a page frame, etc.)
-        # options         - dict of {label: command}. `command` can be any callable.
-        # default_text    - text shown on the main button before anything is picked
-        # callback        - optional function called as callback(label, command) on selection
-        # **kwargs        - anything else (padx, fg_color, etc.) gets forwarded to CTkFrame
-        super().__init__(parent, fg_color="transparent", **kwargs)
-
-        self.options = options          # remember the choices so open_menu() can build buttons for them
-        self.callback = callback        # store the optional callback for later use in select_option()
-        self.menu_frame = None          # holds the popup frame once it exists; None means "not open"
-        self.menu_open = False          # tracks whether the option list is currently visible
-
-        # This is the always-visible button. Its text IS the current selection.
-        self.main_button = ctk.CTkButton(
-            self,
-            text=default_text,          # starts out showing the placeholder text
-            command=self.toggle_menu,   # clicking it shows/hides the option list below
-            anchor="w",                 # left-align the text instead of centering it
-        )
-        self.main_button.pack(fill="x")  # stretch to the width of the parent frame
-
-    def toggle_menu(self):
-        # Single entry point for the button click: pick open or close based on current state.
-        self.close_menu() if self.menu_open else self.open_menu()
-
-    def open_menu(self):
-        # Build a new frame to hold the option buttons. This frame only exists while the
-        # menu is open -- it gets destroyed again in close_menu().
-        self.menu_frame = ctk.CTkFrame(self, fg_color=("gray90", "gray20"))  # light mode, dark mode
-        self.menu_frame.pack(fill="x", pady=(2, 0))  # sits directly below the main button
-
-        # One button per option, all parented to menu_frame (not self, not the app --
-        # this is the "wrong parent" spot to double check if buttons ever show up in the
-        # wrong place).
-        for label, command in self.options.items():
-            option_btn = ctk.CTkButton(
-                self.menu_frame,
-                text=label,                            # this button's own label is the option text
-                fg_color="transparent",                # blends into menu_frame until hovered
-                text_color=("black", "white"),         # readable in both appearance modes
-                hover_color=("gray80", "gray30"),       # visual feedback on mouse-over
-                anchor="w",                             # left-align, like a real menu item
-                # default-arg trick: binds *this* option now, not whatever the loop
-                # variable happens to be when the button is later clicked
-                command=lambda name=label, cmd=command: self.select_option(name, cmd),
-            )
-            option_btn.pack(fill="x", padx=2, pady=2)  # stack vertically, full width
-
-        self.menu_open = True  # record that the menu is now visible
-
-    def close_menu(self):
-        # Only destroy if a menu_frame actually exists -- avoids errors if close_menu()
-        # is somehow called twice in a row.
-        if self.menu_frame is not None:
-            self.menu_frame.destroy()  # removes the frame and all its option buttons from the window
-            self.menu_frame = None     # clear the reference now that it's gone
-        self.menu_open = False         # record that the menu is closed
-
-    def select_option(self, name, command):
-        # Called when the user clicks one of the option buttons.
-        self.main_button.configure(text=name)  # update the display button to show the pick
-        self.close_menu()                      # collapse the list now that a choice was made
-        if self.callback:                      # only call it if the caller actually provided one
-            self.callback(name, command)
-
-
-def on_dropdown_select(name, command):
-    # Generic callback shared by every DropdownButton instance. It doesn't need to
-    # know which dropdown fired it -- `command` is already the exact bound method
-    # (e.g. MainSideMenu.on_heading_1) that was stored in that dropdown's options
-    # dict, so all this has to do is call it.
-    print("Custom dropdown selection:", name)
-    command()
+BULLET_ICON_PATH = os.path.join(ASSETS_DIR, "bullet_point_icon.png")
+ARROW_ICON_PATH = os.path.join(ASSETS_DIR, "arrow_icon.png")
 
 
 class MainSideMenu(ctk.CTk):
@@ -124,60 +45,62 @@ class MainSideMenu(ctk.CTk):
         self.heading_icon = self._load_icon(HEADING_ICON_PATH)
         self.italics_icon = self._load_icon(ITALICS_ICON_PATH)
         self.camera_icon = self._load_icon(CAMERA_ICON_PATH)
+        self.bullet_icon = self._load_icon(BULLET_ICON_PATH)
+        self.arrow_icon = self._load_icon(ARROW_ICON_PATH)
 
-        self.button_bar = ctk.CTkFrame(self, width=200, corner_radius=0, fg_color=constants.DARK_FG_COLOR)
+        self.button_bar = ctk.CTkFrame(self, width=100, corner_radius=50, fg_color=constants.DARK_FG_COLOR)
         self.button_bar.pack(fill="both", expand=True)
         self.button_bar.pack_propagate(False)
         self.button_bar.grid_columnconfigure(0, weight=1)
 
-        # These dicts have to be built here, inside __init__, not at module scope.
-        # Their values are bound methods (self.on_heading_1, etc.), which only
-        # exist once a MainSideMenu instance -- this one -- has been created.
         self.heading_options = {
-            "H1": self.on_heading_1,
-            "H2": self.on_heading_2,
-            "H3": self.on_heading_3,
-            "H4": self.on_heading_4,
-        }
+                "H1": self.on_heading_1,
+                "H2": self.on_heading_2,
+                "H3": self.on_heading_3,
+                "H4": self.on_heading_4,
+            }
+    
         self.bullet_options = {
-            # TODO: fill in with actual bullet-style options, e.g.:
-            # "Bullet": self.on_bullet,
-            # "Arrow": self.on_arrow,
+            "●": self.on_bullet_1,
+            "◆": self.on_bullet_2,
+            "■": self.on_bullet_3,
         }
 
-        # Each entry describes one row in the sidebar. "kind" tells the loop
-        # below whether to build a plain button or a DropdownButton.
         buttons = [
-            {"kind": "dropdown", "icon": self.heading_icon, "options": self.heading_options, "default_text": "H"},
-            {"kind": "button", "icon": self.italics_icon, "command": self.on_italics},
-            {"kind": "dropdown", "icon": None, "options": self.bullet_options, "default_text": "●"},
-            {"kind": "button", "text": ">", "command": self.on_arrow},
-            {"kind": "button", "icon": self.camera_icon, "command": self.on_camera},
+            {"type": "dropdown", "name": "heading", "icon": self.heading_icon, "options": self.heading_options},
+            {"type": "button", "name": "italics", "icon": self.italics_icon, "command": self.on_italics},
+            {"type": "dropdown", "name": "bullet", "icon": self.bullet_icon, "options": self.bullet_options},
+            {"type": "button", "name": "arrow", "icon": self.arrow_icon, "command": self.on_arrow},
+            {"type": "button", "name": "camera", "icon": self.camera_icon, "command": self.on_camera}
         ]
 
         divider_color = "#D3D3D3"
         row = 0
-        for i, entry in enumerate(buttons):
+        for i, entry in enumerate(buttons): 
             self.button_bar.grid_rowconfigure(row, weight=1, uniform="btn_row")
 
-            if entry["kind"] == "button":
-                self.make_button(entry.get("text", ""), entry.get("icon"), entry["command"], "normal", row)
-            else:  # "dropdown"
-                dropdown = DropdownButton(
-                    self.button_bar,
-                    options=entry["options"],
-                    default_text=entry["default_text"],
-                    callback=on_dropdown_select,
-                )
+            if entry["type"] == "button": 
+                try: 
+                    self.make_button(entry.get("icon"), entry["command"], "normal", row)
+                except KeyError: 
+                    print(f"{entry.get("name")} button has no command." )
+                    continue
+            else: 
+                dropdown = DropdownButton( 
+                            self.button_bar,
+                            icon=entry["icon"],
+                            options=entry["options"],
+                            callback=on_dropdown_select,  # callback function that happens upon selection/click
+                        )
                 dropdown.grid(row=row, column=0, sticky="nsew")
 
             row += 1
 
             if i < len(buttons) - 1:
-                divider = ctk.CTkFrame(self.button_bar, height=1, corner_radius=0, fg_color=divider_color)
-                divider.grid(row=row, column=0, sticky="ew")
-                self.button_bar.grid_rowconfigure(row, weight=0)
-                row += 1
+                    divider = ctk.CTkFrame(self.button_bar, height=1, corner_radius=0, fg_color=divider_color)
+                    divider.grid(row=row, column=0, sticky="ew")
+                    self.button_bar.grid_rowconfigure(row, weight=0)
+                    row += 1
 
     def _load_icon(self, path, size=(20, 20)):
         img = Image.open(path)
@@ -190,10 +113,10 @@ class MainSideMenu(ctk.CTk):
         y_position = (screen_height - window_height) // 2
         self.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
 
-    def make_button(self, text, icon, command, state, row):
+    def make_button(self, icon, command, state, row):
         btn = ctk.CTkButton(
             self.button_bar,
-            text=text,
+            text="",
             image=icon,
             compound="left",
             font=("Arial", 18),
@@ -205,6 +128,9 @@ class MainSideMenu(ctk.CTk):
         )
         btn.grid(row=row, column=0, sticky="nsew")
         return btn
+
+    def on_heading(self):
+        print("heading clicked")
 
     def on_heading_1(self):
         print("H1 clicked")
@@ -218,6 +144,15 @@ class MainSideMenu(ctk.CTk):
     def on_heading_4(self):
         print("H4 clicked")
 
+    def on_bullet_1(self):
+        print("Bullet 1 clicked")
+
+    def on_bullet_2(self):
+        print("Bullet 2 clicked")
+
+    def on_bullet_3(self):
+        print("Bullet 3 clicked")
+
     def on_italics(self):
         print("italics clicked")
 
@@ -229,6 +164,100 @@ class MainSideMenu(ctk.CTk):
 
     def on_camera(self):
         print("camera clicked")
+
+
+class DropdownButton(ctk.CTkFrame): # DropdownButton IS a frame; its parent is MainSideMenu
+    """
+    A self-contained dropdown widget: one CTkButton that shows the
+    current selection, plus a hideable frame of option buttons.
+    Clicking an option updates the main button's text.
+    """
+
+    def __init__(self, parent, icon, options, callback=None, **kwargs):
+
+        # fg_color="transparent" so this wrapper frame has no visible background of its own --
+        # only the buttons inside it should be visible
+        super().__init__(parent, fg_color="transparent", **kwargs)
+
+        self.options = options          # remember the dropdown menu choices so open_menu() can build buttons for them
+        self.callback = callback          # store the optional callback for later use in select_option()
+        self.menu_frame = None          # holds the popup frame once it exists; None means "not open"
+        self.menu_open = False          # tracks whether the option list is currently visible
+
+        # This is the always-visible button. Its text IS the current selection.
+        self.main_button = ctk.CTkButton(
+            self,
+            text="",
+            text_color="black",
+            image=icon,
+            command=self.toggle_menu,
+            corner_radius=0   # clicking it shows/hides the option list below
+        )
+        self.main_button.pack(fill="both", expand=True)  # stretch to the width of the parent frame
+
+    def toggle_menu(self):
+        if self.menu_open:
+            self.close_menu()
+        else:
+            self.open_menu()
+       
+
+    def open_menu(self):
+
+        # Compute position/size before creating dropdown_menu_frame bc CTkFrame needs
+        # width passed into constructor, not place()
+        x = self.winfo_x()
+        y = self.winfo_y() + self.winfo_height()
+        width = self.winfo_width()
+
+        # Build a new frame to hold the option buttons. This frame only exists while the
+        # menu is open -- it gets destroyed again in close_menu().
+        self.dropdown_menu_frame = ctk.CTkFrame(self.master, width=width, fg_color=("gray90", "gray20"))  # light mode, dark mode
+        # self.master is button_bar since that's what DropdownButton is parented to
+
+        self.dropdown_menu_frame.place(x=x, y=y)
+        self.dropdown_menu_frame.lift()  # make sure it stacks above the other buttons
+
+        # One button per option string, all parented to menu_frame (not self, not app --
+        # this is the "wrong parent" spot to double check if buttons ever show up in the
+        # wrong place)
+        for k, v in self.options.items():
+            option_btn = ctk.CTkButton(
+                self.dropdown_menu_frame,
+                text=k,                                # this button's own label is the option text
+                fg_color="transparent",               # blends into menu_frame until hovered
+                text_color=("black", "white"),        # readable in both appearance modes
+                hover_color=("gray80", "gray30"),      # visual feedback on mouse-over
+                anchor="w",                            # left-align, like a real menu item
+                # default-arg trick: binds *this* option now, not the last
+                # value of the loop variable when the button is later clicked
+                command=lambda name=k, cmd=v: self.select_option(name, cmd),
+            )
+            option_btn.pack(fill="x", padx=2, pady=2)  # stack vertically, full width
+
+        self.menu_open = True  # record that the menu is now visible
+
+    def close_menu(self):
+        # Only destroy if a menu_frame actually exists -- avoids errors if close_menu()
+        # is somehow called twice in a row.
+        if self.dropdown_menu_frame is not None:
+            self.dropdown_menu_frame.destroy()  # removes the frame and all its option buttons from the window
+            self.dropdown_menu_frame = None     # clear the reference now that it's gone
+        self.menu_open = False         # record that the menu is closed
+
+    def select_option(self, name, command):
+        # Called when the user clicks one of the option buttons.
+        self.main_button.configure(text=name, image=None)  # this is the actual "update the display button" step
+        self.close_menu()                        # collapse the list now that a choice was made
+        if self.callback:                         # only call it if the caller actually provided one
+            self.callback(command)
+
+
+def on_dropdown_select(command):
+    # command = the value passed up from DropdownButton.select_option()
+    # (this is the dict value for whatever key the user clicked, e.g. self.on_heading_1)
+    print("Custom dropdown selection")
+    command()
 
 
 if __name__ == "__main__":
