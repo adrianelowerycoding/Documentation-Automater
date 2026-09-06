@@ -3,6 +3,7 @@ from base_page import MakeBasePage
 from enum import Enum, auto
 import constants
 from recording_state import RecordingState
+from main_side_menu import MainSideMenu
 
 """
 CURRENT PROB: After I save or clear the first file all of the "disableds" are turned off. I'm able to click the pause, stop, save, and clear buttons. 
@@ -63,6 +64,7 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
         # All frames and elements (recording_button_frame, save_button_frame, output_btn) 
         # on this page sit in the HomePage frame
 
+        self.main_side_menu = None # Tracking toplevel for on_click_record
         # -- Prepping Page -- 
         ## -- Centering elements and 
         self.rowconfigure(0, weight=1) # row 0: top spacer
@@ -153,19 +155,31 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
             getattr(self, btn_name).configure(**kwargs)
 
     def on_click_record(self): 
+        # Sets state to recording and opens main_side_menu
         self.set_state(RecordingState.RECORDING)
+        # If main_side_menu isn't open, open it and lift it
+        if self.main_side_menu is None or not self.main_side_menu.winfo_exists(): 
+            self.main_side_menu = MainSideMenu(self)
+        else:
+            self.main_side_menu.lift()
 
     def on_click_pause(self):
         self.set_state(RecordingState.PAUSED)
 
     def on_click_stop(self):
+        # Stops the recording and destroys main_side_menu
         self.set_state(RecordingState.STOPPED)
+        self.main_side_menu.destroy()
 
     def on_click_save(self): 
         self.set_state(RecordingState.SAVED)
 
     def on_click_clear(self): 
         self.set_state(RecordingState.CLEARED)
+
+
+      
+
 
 
 
