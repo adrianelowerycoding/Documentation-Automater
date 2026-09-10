@@ -53,10 +53,33 @@ import tkinter as tk
 from PIL import ImageGrab
 import ctypes
 
+# Load the two Windows DLLs used to detect the real display scale factor
+_user32 = ctypes.windll.user32
+_gdi32 = ctypes.windll.gdi32
+_user32.GetDC.restype = ctypes.c_void_p          # must set restype or the
+_user32.GetDC.argtypes = [ctypes.c_void_p]       # HDC gets truncated to
+_user32.ReleaseDC.argtypes = [ctypes.c_void_p, ctypes.c_void_p]  # 32 bits
+_gdi32.GetDeviceCaps.argtypes = [ctypes.c_void_p, ctypes.c_int]  # on 64-bit
+
+HORZRES = 8            # GetDeviceCaps code: logical (scaled-down) width
+DESKTOPHORZRES = 118   # GetDeviceCaps code: true physical width
+
+# Remove DPI Awareness so scaling issue is fixed; will stretch windows on scaled monitors
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(0)  # PROCESS_DPI_UNAWARE
 except Exception as e:
     print("shcore failed:", e)
+
+def get_dpi_scale():
+    """Physical pixels per logical pixel, e.g. 1.25 at 125% scaling.
+    DESKTOPHORZRES always reports true physical width; HORZRES follows
+    whatever DPI virtualization applies to the calling process — so their
+    ratio is the scale factor, independent of this process's own awareness."""
+    hdc = _user32.GetDC(None)  # device context for the whole screen
+    try:
+        return _gdi32.GetDeviceCaps(hdc, DESKTOPHORZRES) / _gdi32.GetDeviceCaps(hdc, HORZRES)  # physical ÷ logical = scale
+    finally:
+        _user32.ReleaseDC(None, hdc)  # always free the DC, even on error
 
 class BorderWindow(ctk.CTkToplevel):
     """Visual border only. Colorkey middle lets clicks fall through to GlassWindow.
@@ -219,8 +242,8 @@ class EditPopUp(ctk.CTkToplevel):
     def set_screenshot(self, screenshot):
         self.screenshot = screenshot
 
-    def save_screenshot(self): 
-        if self.screenshot is not None: 
+    def save_screenshot(self):
+        if self.screenshot is not None:
             self.screenshot.save("screenshot.png")
             print("Saved screenshot.png")
 
@@ -237,6 +260,7 @@ class CaptureOverlay:
             on_drag=self._on_drag,
             on_release=self._on_release,
         )
+        self.dpi_scale = get_dpi_scale()  # scale factor to fix screenshot cropping (see get_dpi_scale)
         self.pop_up = EditPopUp(master)
 
         self.start_x = self.start_y = 0
@@ -278,7 +302,12 @@ class CaptureOverlay:
             self.selection_box.hide()
             self.glass_window.update_idletasks()
 
-            screenshot = ImageGrab.grab(bbox=(x1, y1, x2, y2))
+            # x1..y2 are logical (DPI-unaware) coords; ImageGrab needs real
+            # physical pixels, so scale up first or the capture comes out
+            # as a smaller, shifted crop instead of the selected area.
+            s = self.dpi_scale
+            bbox = (int(x1 * s), int(y1 * s), int(x2 * s), int(y2 * s))
+            screenshot = ImageGrab.grab(bbox=bbox)
             self.pop_up.set_screenshot(screenshot) # sends image to popup; "save" happens when save button is pressed
 
             self.selection_box.show_at(x1, y1, x2, y2)
