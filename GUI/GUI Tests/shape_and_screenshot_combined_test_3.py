@@ -51,7 +51,12 @@ WHY THREE WINDOWS:
 import customtkinter as ctk
 import tkinter as tk
 from PIL import ImageGrab
+import ctypes
 
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(0)  # PROCESS_DPI_UNAWARE
+except Exception as e:
+    print("shcore failed:", e)
 
 class BorderWindow(ctk.CTkToplevel):
     """Visual border only. Colorkey middle lets clicks fall through to GlassWindow.
@@ -185,8 +190,10 @@ class EditPopUp(ctk.CTkToplevel):
         self.overrideredirect(True)
         self.attributes("-topmost", True)
 
+        self.screenshot = None  # will be set on release
+
         self.geometry(f"{self.WIDTH}x{self.HEIGHT}")
-        save_btn = ctk.CTkButton(self, text="Save", fg_color="blue")
+        save_btn = ctk.CTkButton(self, text="Save", fg_color="blue", command=self.save_screenshot)
         save_btn.pack(side="left")
 
         edit_btn = ctk.CTkButton(self, text="Edit", fg_color="blue")
@@ -208,6 +215,15 @@ class EditPopUp(ctk.CTkToplevel):
 
     def hide(self):
         self.withdraw()
+
+    def set_screenshot(self, screenshot):
+        self.screenshot = screenshot
+
+    def save_screenshot(self): 
+        if self.screenshot is not None: 
+            self.screenshot.save("screenshot.png")
+            print("Saved screenshot.png")
+
 
 
 class CaptureOverlay:
@@ -263,8 +279,7 @@ class CaptureOverlay:
             self.glass_window.update_idletasks()
 
             screenshot = ImageGrab.grab(bbox=(x1, y1, x2, y2))
-            screenshot.save("auto_selection.png")
-            print("Saved auto_selection.png")
+            self.pop_up.set_screenshot(screenshot) # sends image to popup; "save" happens when save button is pressed
 
             self.selection_box.show_at(x1, y1, x2, y2)
 
