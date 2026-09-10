@@ -12,6 +12,10 @@ Proposed Ideas/Additions:
     - Screenshot Window: 
         - Save screenshot of the selected area with a button release command: 
         Canvas.bind("<ButtonRelease-1>", on_button_release)
+        - Pop up window after button release. "Save, Edit" 
+        - Screenshot naming convention can change whenever the Heading 1 changes, so when the
+        screenshot is saved the name's are organized and easier to parse.
+
 
 
 Accepted Ideas: 
@@ -29,6 +33,9 @@ Rejected Ideas:
 
 
 Maybe Ideas:
+
+    - Settings: 
+        - Users 
 
 
 Cutbacks/Save for future versions: 
