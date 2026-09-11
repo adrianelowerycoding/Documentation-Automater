@@ -9,3 +9,11 @@ All-Time:
 
         - Dropdown button menu to Main Menu. Way more complicated than I thought.
 
+        - Screenshot Window transparency and alpha issues; as well as stacking
+        issues for the pages
+
+        - Reducing scope in Edit Menu
+            - Realizing text is not an option in Canvas 
+            - Choosing to cut text, drawing, image getting constrained to
+            frame, and scroll bar for edit menu.
+
