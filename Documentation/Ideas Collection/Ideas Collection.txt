@@ -16,6 +16,15 @@ Proposed Ideas/Additions:
         - Screenshot naming convention can change whenever the Heading 1 changes, so when the
         screenshot is saved the name's are organized and easier to parse.
 
+    - Edit Menu: 
+        - Shape dropdown button w/ rectangle and arrow
+        - Shape dropdown has color picker
+        - Save and Exit button
+            - Exit: "Exit without saving?" popup
+            - Save: ImageGrab() the frame coordinates and 
+            apply the naming convention. 
+            
+
 
 
 Accepted Ideas: 
