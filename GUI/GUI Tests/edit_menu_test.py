@@ -1,9 +1,9 @@
 """
 
-This version sets the top level window at a default size. The default size is 
+This version sets the top level window at a default size. The default size is
 meant to hold images smaller than the default size and fit to images larger than
 the default size. The root window has 3 test buttons that feed a small, medium,
-or large image (larger than the default window size) to test how the window and 
+or large image (larger than the default window size) to test how the window and
 the toolbar react to dynamic sizing.
 
 This version combines:
@@ -15,12 +15,21 @@ This version combines:
     window (top to bottom) so the image can never be drawn underneath it.
     The actual toolbar sits vertically centered within that column in the middle
     right of the window. Only the 3rd button opens a dropdown with 2 options.
+  - Exact-bounds capture: when the image is smaller than the default size,
+    the canvas centers it and the leftover space around it is empty gray
+    canvas, not part of the image. Screenshotting the canvas's full
+    root-coordinate bounds (like before) picks up that gray margin too.
+    Fix: remember exactly where _draw_image placed the image (self.image_x/
+    self.image_y) and use those + the image's own width/height to build the
+    ImageGrab bbox, instead of the canvas's width/height. That grabs only
+    the image's actual on-screen footprint, borders excluded, with no need
+    to stretch/distort the image to fill the canvas.
 
 """
 
 import customtkinter as ctk
 import tkinter as tk
-from PIL import Image, ImageTk, ImageDraw
+from PIL import Image, ImageTk, ImageDraw, ImageGrab
 
 
 class DropdownButton(ctk.CTkFrame):
@@ -121,9 +130,26 @@ class EditMenu(ctk.CTkToplevel):
         self.window_height = max(self.DEFAULT_IMAGE_HEIGHT, img.height)
         self.window_width = self.image_area_width + self.TOOLBAR_WIDTH
 
+        # Where _draw_image ends up placing the image's top-left corner,
+        # relative to the canvas -- set for real in _draw_image(). Needed
+        # later so a "capture the image" action can build a bbox around
+        # just the image, not the whole (possibly larger) canvas.
+        self.image_x = 0
+        self.image_y = 0
+
         self.title("Edit Menu")
-        self.geometry(f"{self.window_width}x{self.window_height}")
+        self._center_on_screen()
         self.resizable(False, False)
+
+        # overrideredirect(True) strips the OS title bar/border. On some
+        # platforms the window manager nudges the window's position when
+        # those decorations disappear, so the centering math above can be
+        # thrown off right after this call. update_idletasks() + a
+        # short after() re-apply (same pattern as a real title-bar-less
+        # toolbar window) corrects for that once things settle.
+        self.update_idletasks()
+        self.overrideredirect(True)
+        self.after(150, self._center_on_screen)
 
         # -- Toolbar column (full window height, hugs the right edge) --
         # Built before the image container so the reserved strip exists
@@ -145,14 +171,29 @@ class EditMenu(ctk.CTkToplevel):
         self.canvas.pack(fill="both", expand=True)
         self._draw_image(img)
 
+    def _center_on_screen(self):
+        # Screen size in pixels, independent of this window's own size.
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        x = (screen_width - self.window_width) // 2
+        y = (screen_height - self.window_height) // 2
+
+        # Always pass width/height together with the position -- setting
+        # only "+x+y" without size can make geometry() fall back to the
+        # window's last requested size instead of the one we computed.
+        self.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
+
     def _draw_image(self, img):
         self.tk_image = ImageTk.PhotoImage(img)  # keep a reference or it gets garbage collected
         # Center the image within its own area in case that area ended up
         # bigger than the image (i.e. the image was smaller than the
-        # default size on that axis).
-        x = (self.image_area_width - img.width) // 2
-        y = (self.window_height - img.height) // 2
-        self.canvas.create_image(x, y, anchor="nw", image=self.tk_image)
+        # default size on that axis). Remember the offset -- this is the
+        # top-left corner of the image's actual footprint on the canvas,
+        # as opposed to the canvas's own (possibly larger) footprint.
+        self.image_x = (self.image_area_width - img.width) // 2
+        self.image_y = (self.window_height - img.height) // 2
+        self.canvas.create_image(self.image_x, self.image_y, anchor="nw", image=self.tk_image)
 
     def _build_toolbar(self):
         # toolbar_frame is the permanent, reserved column: full window
@@ -185,11 +226,11 @@ class EditMenu(ctk.CTkToplevel):
         }
 
         buttons = [
-            {"type": "button", "text": "Button 1", "command": self.on_button_1},
-            {"type": "button", "text": "Button 2", "command": self.on_button_2},
-            {"type": "dropdown", "text": "Edit ▾", "options": edit_options},
-            {"type": "button", "text": "Button 4", "command": self.on_button_4},
-            {"type": "button", "text": "Button 5", "command": self.on_button_5},
+            {"type": "button", "text": "Exit", "command": self.on_button_1},
+            {"type": "button", "text": "Save", "command": self.on_button_2},
+            {"type": "dropdown", "text": "Color", "options": edit_options},
+            {"type": "button", "text": "Shapes", "command": self.on_button_4},
+            {"type": "button", "text": "Revert", "command": self.on_button_5},
         ]
 
         for row, entry in enumerate(buttons):
@@ -215,9 +256,28 @@ class EditMenu(ctk.CTkToplevel):
     # -- Placeholder command handlers (print-only, for wiring/testing) --
     def on_button_1(self):
         print("Button 1 clicked")
+        self.destroy()  # close the edit menu window
 
     def on_button_2(self):
         print("Button 2 clicked")
+        self.update_idletasks()  # ensures the canvas is rendered/positioned first
+
+        # Canvas's own screen-absolute top-left corner...
+        canvas_root_x = self.canvas.winfo_rootx()
+        canvas_root_y = self.canvas.winfo_rooty()
+
+        # ...plus the offset where the image was actually drawn inside it
+        # (self.image_x/self.image_y, set in _draw_image) gives the
+        # image's real on-screen top-left corner. Sizing the bbox to the
+        # image's own width/height (not the canvas's) means the grab never
+        # includes the empty margin around a smaller-than-default image.
+        x0 = canvas_root_x + self.image_x
+        y0 = canvas_root_y + self.image_y
+        x1 = x0 + self.img.width
+        y1 = y0 + self.img.height
+
+        self.saved_img = ImageGrab.grab(bbox=(x0, y0, x1, y1))
+        self.saved_img.save("screenshot.png")
 
     def on_button_4(self):
         print("Button 4 clicked")
