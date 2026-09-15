@@ -131,6 +131,7 @@ class EditMenu(ctk.CTkToplevel):
         super().__init__(master)
 
         self.img = img
+        
 
         # -- Compute dynamic window size --
         # The image area defaults to DEFAULT_IMAGE_WIDTH x
@@ -182,6 +183,17 @@ class EditMenu(ctk.CTkToplevel):
         self.canvas.pack(fill="both", expand=True)
         self._draw_image(img)
 
+        self.start_x = None
+        self.start_y = None
+        self.rect_id = None
+        self.shape_color = "red"
+
+        # Bind mouse events 
+        self.canvas.bind("<Button-1>", self._on_press)
+        self.canvas.bind("<B1-Motion>", self._on_drag)
+        self.canvas.bind("<ButtonRelease-1>", self._on_release)
+
+    # -- Window and Toolbar creation methods -- 
     def _center_on_screen(self):
         # Screen size in pixels, independent of this window's own size.
         screen_width = self.winfo_screenwidth()
@@ -262,6 +274,26 @@ class EditMenu(ctk.CTkToplevel):
                 )
                 dropdown.grid(row=row, column=0, sticky="nsew")
 
+    # -- Drawing methods -- 
+
+    def _on_press(self, event): 
+        self.outline = self.shape_color
+        self.start_x = event.x
+        self.start_y = event.y
+
+        # Create a temporary rectangle w/ no thickness yet
+        self.rect_id = self.canvas.create_rectangle(
+            self.start_x, self.start_y, self.start_x, self.start_y,
+            outline=self.outline, width=2
+        )
+
+    def _on_drag(self, event): 
+        cur_x, cur_y = event.x, event.y
+        self.canvas.coords(self.rect_id, self.start_x, self.start_y, cur_x, cur_y)
+
+    def _on_release(self, event): 
+        self.rect_id = None
+
     # -- Placeholder command handlers (print-only, for wiring/testing) --
     def on_exit_btn(self):
         print("Button 1 clicked")
@@ -293,6 +325,15 @@ class EditMenu(ctk.CTkToplevel):
 
     def on_color_btn(self):
         print("Color button clicked")
+
+        pick_color = AskColor()
+        color = pick_color.get()
+
+        if color:
+            self.shape_color = color
+            print(f"Selected color: {self.shape_color}")
+
+
     def on_shapes_btn(self):
         print("Shapes button clicked")
 
