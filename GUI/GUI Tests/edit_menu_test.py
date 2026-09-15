@@ -30,6 +30,7 @@ This version combines:
 import customtkinter as ctk
 import tkinter as tk
 from PIL import Image, ImageTk, ImageDraw, ImageGrab
+from CTkColorPicker import *
 
 
 class DropdownButton(ctk.CTkFrame):
@@ -48,6 +49,8 @@ class DropdownButton(ctk.CTkFrame):
         self.callback = callback
         self.dropdown_menu_frame = None
         self.menu_open = False
+        self.button_width = width         # remembered so open_menu() can size the popup to match --
+                                           # more reliable than querying winfo_width() at click time
 
         self.main_button = ctk.CTkButton(
             self,
@@ -64,15 +67,23 @@ class DropdownButton(ctk.CTkFrame):
             self.open_menu()
 
     def open_menu(self):
-        # Position/size computed relative to this widget's parent (the
-        # toolbar), same approach as the reference DropdownButton.
-        x = self.winfo_x()
-        y = self.winfo_y() + self.winfo_height()
-        width = self.winfo_width()
+    
+        # Parent the dropdown menu popup to the whole window, not the toolbar button, so 
+        # it won't be constrained to the toolbar button's size/position.
+        top_level = self.winfo_toplevel()  # get the top-level window containing this widget
+        width = self.button_width
+        # x is anchored to the window's right side
+        top_level.update_idletasks()  # make sure winfo_width() reflects the real, current size
+        x = top_level.winfo_width() - width
+        y = self.winfo_rooty() - top_level.winfo_rooty() + self.winfo_height()
+        # One row per option, each having the same height.
+        height = len(self.options) * self.winfo_height()
 
-        self.dropdown_menu_frame = ctk.CTkFrame(self.master, width=width, fg_color=("gray90", "gray20"))
+        self.dropdown_menu_frame = ctk.CTkFrame(top_level, width=width, height=height, fg_color=("gray90", "gray20"))
+        self.dropdown_menu_frame.pack_propagate(False)  # lock to width/height - otherwise it stretches to
+                                                         # fit the option buttons' own default size
         self.dropdown_menu_frame.place(x=x, y=y)
-        self.dropdown_menu_frame.lift()
+        self.dropdown_menu_frame.lift()  # stack it above the toolbar/canvas siblings
 
         for label, command in self.options.items():
             option_btn = ctk.CTkButton(
@@ -213,24 +224,22 @@ class EditMenu(ctk.CTkToplevel):
         # while toolbar_frame itself still spans top to bottom.
         self.toolbar = ctk.CTkFrame(self.toolbar_frame, width=self.TOOLBAR_WIDTH, height=toolbar_height, corner_radius=8)
         self.toolbar.place(relx=0.5, rely=0.5, anchor="center")
-        self.toolbar.pack_propagate(False)  # fixed size regardless of toolbar_frame's height
+        self.toolbar.grid_propagate(False)  # fixed size regardless of toolbar_frame's height
 
         self.toolbar.grid_columnconfigure(0, weight=1)
         for row in range(self.TOOLBAR_BUTTON_COUNT):
             self.toolbar.grid_rowconfigure(row, weight=1, uniform="toolbar_row")
-
-        # Only the 3rd button is a dropdown, with exactly 2 options.
-        edit_options = {
+        shape_options = {
             "Option A": self.on_edit_option_a,
             "Option B": self.on_edit_option_b,
         }
 
         buttons = [
-            {"type": "button", "text": "Exit", "command": self.on_button_1},
-            {"type": "button", "text": "Save", "command": self.on_button_2},
-            {"type": "dropdown", "text": "Color", "options": edit_options},
-            {"type": "button", "text": "Shapes", "command": self.on_button_4},
-            {"type": "button", "text": "Revert", "command": self.on_button_5},
+            {"type": "button", "text": "Exit", "command": self.on_exit_btn},
+            {"type": "button", "text": "Save", "command": self.on_save_btn},
+            {"type": "button", "text": "Color", "command": self.on_color_btn},
+            {"type": "dropdown", "text": "Shapes", "options": shape_options},
+            {"type": "button", "text": "Revert", "command": self.on_revert_btn},
         ]
 
         for row, entry in enumerate(buttons):
@@ -254,11 +263,11 @@ class EditMenu(ctk.CTkToplevel):
                 dropdown.grid(row=row, column=0, sticky="nsew")
 
     # -- Placeholder command handlers (print-only, for wiring/testing) --
-    def on_button_1(self):
+    def on_exit_btn(self):
         print("Button 1 clicked")
         self.destroy()  # close the edit menu window
 
-    def on_button_2(self):
+    def on_save_btn(self):
         print("Button 2 clicked")
         self.update_idletasks()  # ensures the canvas is rendered/positioned first
 
@@ -278,12 +287,17 @@ class EditMenu(ctk.CTkToplevel):
 
         self.saved_img = ImageGrab.grab(bbox=(x0, y0, x1, y1))
         self.saved_img.save("screenshot.png")
+        self.destroy()  # close the edit menu window
 
-    def on_button_4(self):
-        print("Button 4 clicked")
 
-    def on_button_5(self):
-        print("Button 5 clicked")
+
+    def on_color_btn(self):
+        print("Color button clicked")
+    def on_shapes_btn(self):
+        print("Shapes button clicked")
+
+    def on_revert_btn(self):
+        pass  # TODO
 
     def on_edit_option_a(self):
         print("Edit Option A selected")
