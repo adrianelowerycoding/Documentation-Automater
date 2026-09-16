@@ -30,7 +30,8 @@ import ctypes                  # used to disable DPI scaling awareness
 import os                      
 import customtkinter as ctk    
 import constants                # shared color/style values used across the app
-from PIL import Image          
+from PIL import Image 
+from screenshot_window import CaptureOverlay
 
 # Force DPI-unaware: Windows will bitmap-scale the window instead of
 # letting it react to the real monitor DPI. This avoids the
@@ -71,6 +72,7 @@ class MainSideMenu(ctk.CTkToplevel):
 
         # Collapsed = button_bar's whole window hidden, not resized. The
         # toggle button lives in its own separate window (toggle_win below).
+        self.screenshot_window = None
         self.collapsed = False
         self.expanded_width = 50
         self.window_height = 500
@@ -291,6 +293,11 @@ class MainSideMenu(ctk.CTkToplevel):
         # the way calling self.withdraw() directly (without updating the flag)
         # would.
         self.toggle_collapse()
+        if self.screenshot_window is None or not self.screenshot_window.winfo_exists():
+            self.screenshot_window = CaptureOverlay(self)
+        else: 
+            self.screenshot_window.lift()
+ 
 
 
 class DropdownButton(ctk.CTkFrame): # DropdownButton IS a frame; its parent is MainSideMenu
