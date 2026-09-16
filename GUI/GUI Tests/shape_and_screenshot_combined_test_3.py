@@ -2,7 +2,8 @@
 
 This test actually works.
 
-Standalone, runnable capture overlay: three Toplevels.
+Standalone, runnable capture overlay: three Toplevels, plus a retractable
+close control docked to the right edge of the screen.
 
 WHY THREE WINDOWS:
 
@@ -44,8 +45,31 @@ WHY THREE WINDOWS:
                     sit visually above GlassWindow without stealing any of
                     its events.
 
-  Stack order top to bottom: BorderWindow > SelectionBox > GlassWindow >
-  real desktop.
+  Stack order top to bottom: CloseToggleTab > CloseButtonWindow >
+  BorderWindow > SelectionBox > GlassWindow > real desktop.
+
+  WHY THE CLOSE BUTTON IS TWO MORE WINDOWS (CloseButtonWindow +
+  CloseToggleTab), NOT A WIDGET ON BorderWindow:
+
+  Retracting it means hiding just the button while everything else (the
+  border, the selection drag) keeps working — but Tk can only
+  withdraw/deiconify a whole Toplevel, not part of one. So the button gets
+  its own small Toplevel (CloseButtonWindow) that can be withdrawn on its
+  own, and a second always-visible Toplevel (CloseToggleTab) holds the
+  arrow that brings it back.
+
+  WHY CLICKS ON THE CLOSE CONTROLS PAUSE THE PERIODIC RE-LIFT:
+
+  GlassWindow covers the entire screen and is fully hit-testable, so
+  CloseButtonWindow/CloseToggleTab must stay strictly above it in z-order
+  at all times or a click meant for them lands on GlassWindow instead (and
+  gets read as the start of a drag). Re-lifting on a 50ms timer normally
+  keeps that order intact, but on Windows, changing a window's z-order
+  *while its own button is mid-press* can interrupt that button's mouse
+  grab, so the ButtonRelease never arrives and the click silently fails or
+  the button looks stuck. Pausing the timer for the duration of a press on
+  either button (see CaptureOverlay._pause_stacking/_resume_stacking)
+  avoids that collision without giving up the periodic correction.
 """
 
 import customtkinter as ctk
@@ -248,9 +272,112 @@ class EditPopUp(ctk.CTkToplevel):
             print("Saved screenshot.png")
 
 
+class CloseButtonWindow(ctk.CTkToplevel):
+    """
+    The red "X" close control: a plain square red box with a white "x",
+    docked flush against the right edge of the screen. Its own Toplevel —
+    not a widget inside BorderWindow — so it can be withdrawn independently
+    of the border/hole/glass stack.
+
+    This is the collapsible half of a dock/toggle pair: CloseToggleTab is
+    the always-visible half that brings it back.
+    """
+
+    WIDTH = 40
+    HEIGHT = 40
+    Y = 20  # fixed distance from the top of the screen
+
+    def __init__(self, master, on_close, on_press=None, on_release=None):
+        super().__init__(master)
+        self.overrideredirect(True)
+        self.attributes("-topmost", True)
+
+        self.close_btn = ctk.CTkButton(
+            self,
+            text="✕",
+            width=self.WIDTH,
+            height=self.HEIGHT,
+            corner_radius=0,          # plain box, not a circle
+            fg_color="red",
+            hover_color="#b30000",
+            text_color="white",
+            command=on_close,
+        )
+        self.close_btn.pack(fill="both", expand=True)
+
+        # add="+" so these run alongside the button's own press/release
+        # handling instead of replacing it — see CaptureOverlay.
+        # _pause_stacking/_resume_stacking for why this exists.
+        if on_press is not None:
+            self.close_btn.bind("<ButtonPress-1>", on_press, add="+")
+        if on_release is not None:
+            self.close_btn.bind("<ButtonRelease-1>", on_release, add="+")
+
+        self.position()
+
+    def position(self):
+        # Flush against the right edge — the same screen_width - window_width
+        # pattern MainSideMenu.menu_size_position uses to dock button_bar.
+        screen_width = self.winfo_screenwidth()
+        x = screen_width - self.WIDTH
+        self.geometry(f"{self.WIDTH}x{self.HEIGHT}+{x}+{self.Y}")
+
+
+class CloseToggleTab(ctk.CTkToplevel):
+    """
+    Small always-visible tab beside CloseButtonWindow. Clicking it collapses
+    (withdraws) or expands (deiconifies) CloseButtonWindow — the same
+    collapsed/expanded split MainSideMenu.toggle_win drives for button_bar,
+    just with one button standing in for the whole toolbar.
+    """
+
+    WIDTH = 16
+    HEIGHT = CloseButtonWindow.HEIGHT
+
+    def __init__(self, master, on_toggle, on_press=None, on_release=None):
+        super().__init__(master)
+        self.overrideredirect(True)
+        self.attributes("-topmost", True)
+        self.collapsed = False
+
+        self.toggle_btn = ctk.CTkButton(
+            self,
+            text="▶",  # points toward the direction CloseButtonWindow expands from
+            corner_radius=0,
+            fg_color="#2b2b2b",       # dark neutral, not red — this is a
+            hover_color="#3d3d3d",    # navigation control, not a warning
+            text_color="white",
+            command=on_toggle,
+        )
+        self.toggle_btn.pack(fill="both", expand=True)
+
+        if on_press is not None:
+            self.toggle_btn.bind("<ButtonPress-1>", on_press, add="+")
+        if on_release is not None:
+            self.toggle_btn.bind("<ButtonRelease-1>", on_release, add="+")
+
+        self.position()
+
+    def position(self):
+        screen_width = self.winfo_screenwidth()
+        if self.collapsed:
+            x = screen_width - self.WIDTH
+        else:
+            x = screen_width - CloseButtonWindow.WIDTH - self.WIDTH
+        self.geometry(f"{self.WIDTH}x{self.HEIGHT}+{x}+{CloseButtonWindow.Y}")
+
+    def set_collapsed(self, collapsed):
+        self.collapsed = collapsed
+        self.toggle_btn.configure(text="◀" if collapsed else "▶")
+        self.position()
+        self.update_idletasks()  # flush the new geometry immediately, so the
+                                  # tab visibly snaps flush to the edge the
+                                  # instant the X is retracted, not on the
+                                  # next idle cycle
+
 
 class CaptureOverlay:
-    """Owns all four windows, keeps them stacked correctly, closes them together."""
+    """Owns all six windows, keeps them stacked correctly, closes them together."""
     def __init__(self, master, border_color="#FF5733", border_thickness=6):
         self.border_window = BorderWindow(master, border_color, border_thickness)
         self.selection_box = SelectionBox(master, color="red", thickness=2)
@@ -263,6 +390,19 @@ class CaptureOverlay:
         self.dpi_scale = get_dpi_scale()  # scale factor to fix screenshot cropping (see get_dpi_scale)
         self.pop_up = EditPopUp(master)
 
+        # Red "X" close control, docked to the right edge of the screen and
+        # retractable via its own toggle tab. Both get pause/resume hooks
+        # into the periodic re-lift below, so a click on either of them
+        # never races against it.
+        self.close_button = CloseButtonWindow(
+            master, on_close=self.close,
+            on_press=self._pause_stacking, on_release=self._resume_stacking,
+        )
+        self.close_toggle = CloseToggleTab(
+            master, on_toggle=self.toggle_close_button,
+            on_press=self._pause_stacking, on_release=self._resume_stacking,
+        )
+
         self.start_x = self.start_y = 0
 
         self.border_window.bind("<Escape>", self.close)
@@ -272,15 +412,43 @@ class CaptureOverlay:
         self._keep_border_on_top()
 
     def _keep_border_on_top(self):
-        # Matches the original known-working pattern: only BorderWindow
-        # needs periodic re-lifting to counter the OS/WM occasionally
-        # reshuffling -topmost windows. SelectionBox and GlassWindow don't
-        # need to be forced into position relative to it — SelectionBox is
-        # created after BorderWindow (so it's already above it in initial
-        # stacking) and GlassWindow's clicks are routed by widget identity
-        # during a drag, not by current z-order.
+        # Matches the original known-working pattern: BorderWindow needs
+        # periodic re-lifting to counter the OS/WM occasionally reshuffling
+        # -topmost windows (most commonly triggered by clicking/dragging on
+        # GlassWindow itself, which Windows tends to raise on click).
+        # close_button/close_toggle ride along in the same cycle so they
+        # stay above border_window too — see the module docstring for why
+        # clicks on THEM pause this loop instead of fighting it.
         self.border_window.lift()
+        if not self.close_toggle.collapsed:
+            # Don't lift a withdrawn window — it has nothing to do with
+            # z-order while hidden, and skipping it here removes any risk
+            # of a stray lift() nudging it back into view while retracted.
+            self.close_button.lift()
+        self.close_toggle.lift()
         self._stack_job = self.border_window.after(50, self._keep_border_on_top)
+
+    def _pause_stacking(self, event=None):
+        if self._stack_job is not None:
+            self.border_window.after_cancel(self._stack_job)
+            self._stack_job = None
+
+    def _resume_stacking(self, event=None):
+        if self._stack_job is None:
+            self._keep_border_on_top()
+
+    def toggle_close_button(self):
+        # Same withdraw/deiconify + flag flip MainSideMenu.toggle_collapse
+        # uses for button_bar, just targeting close_button instead.
+        # Reposition/relabel the tab FIRST, so it's already snapped flush
+        # against the edge the instant the button disappears, rather than
+        # hiding the button and only then catching the tab up to it.
+        collapsed = not self.close_toggle.collapsed
+        self.close_toggle.set_collapsed(collapsed)
+        if collapsed:
+            self.close_button.withdraw()
+        else:
+            self.close_button.deiconify()
 
     def _on_press(self, x_root, y_root):
         self.start_x, self.start_y = x_root, y_root
@@ -323,6 +491,8 @@ class CaptureOverlay:
         if self._stack_job is not None:
             self.border_window.after_cancel(self._stack_job)
             self._stack_job = None
+        self.close_toggle.destroy()
+        self.close_button.destroy()
         self.pop_up.destroy()
         self.selection_box.destroy()
         self.glass_window.destroy()
@@ -337,7 +507,9 @@ if __name__ == "__main__":
 
     status_label = ctk.CTkLabel(
         root,
-        text="Click 'Launch Overlay', then drag a box.\nEsc closes the overlay.",
+        text="Click 'Launch Overlay', then drag a box.\n"
+             "Esc, or the red X docked to the right edge, closes the overlay.\n"
+             "The ▶/◀ tab beside it retracts/restores the X.",
     )
     status_label.pack(pady=(20, 10))
 
