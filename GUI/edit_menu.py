@@ -142,6 +142,9 @@ class EditMenu(ctk.CTkToplevel):
         # Get screenshot to pass to canvas from screenshot_window's EditPopUp
         self.img = img
         self._close_edit_menu_and_glass = close_edit_menu_and_glass
+        self.rectangle_is_set = False
+        self.arrow_is_set = False
+        self.command_history = []
     
         # -- Compute dynamic window size --
         # The image area defaults to DEFAULT_IMAGE_WIDTH x
@@ -251,8 +254,8 @@ class EditMenu(ctk.CTkToplevel):
         for row in range(self.TOOLBAR_BUTTON_COUNT):
             self.toolbar.grid_rowconfigure(row, weight=1, uniform="toolbar_row")
         shape_options = {
-            "Option A": self.on_edit_option_a,
-            "Option B": self.on_edit_option_b,
+            "Rectangle": self.set_rectangle,
+            "Arrow": self.set_arrow,
         }
 
         buttons = [
@@ -286,24 +289,58 @@ class EditMenu(ctk.CTkToplevel):
     # -- Drawing methods -- 
 
     def _on_press(self, event): 
-    
-        self.start_x = event.x
-        self.start_y = event.y
+        if self.rectangle_is_set: 
+            self.start_x = event.x
+            self.start_y = event.y
 
-        # Create a temporary rectangle w/ no thickness yet
-        self.rect_id = self.canvas.create_rectangle(
-            self.start_x, self.start_y, self.start_x, self.start_y,
-            outline=self.shape_color, width=2
-        )
+            # Create a temporary rectangle w/ no thickness yet
+            self.rect_id = self.canvas.create_rectangle(
+                self.start_x, self.start_y, self.start_x, self.start_y,
+                outline=self.shape_color, width=2
+            )
+        else: 
+            self.start_x = event.x
+            self.start_y = event.y
+            self.arrow_id = None
 
     def _on_drag(self, event): 
-        cur_x, cur_y = event.x, event.y
-        self.canvas.coords(self.rect_id, self.start_x, self.start_y, cur_x, cur_y)
+        if self.rectangle_is_set:
+            cur_x, cur_y = event.x, event.y
+            self.canvas.coords(self.rect_id, self.start_x, self.start_y, cur_x, cur_y)
+        else: 
+             # Delete the previous frame's line so it doesn't leave trailing artifacts
+            if self.arrow_id: 
+                self.canvas.delete(self.arrow_id)
+
+            # Draw a line from the original click point to the current mouse position
+            self.arrow_id = self.canvas.create_line(
+                self.start_x, self.start_y, event.x, event.y,
+                arrow=tk.LAST,
+                arrowshape=(18,22,7),
+                width=4,
+                fill=self.shape_color
+            )
 
     def _on_release(self, event): 
-        self.rect_id = None
+        
+        if self.rectangle_is_set:
 
-    # -- Placeholder command handlers (print-only, for wiring/testing) --
+            self.update_idletasks()
+            self.command_history.append(self.rect_id)
+
+            self.rect_id = None
+            # Get screenshot, save the image data and add it to array
+
+        if self.arrow_is_set:
+
+            # put the left, top, right, bottom stuff here?
+            self.update_idletasks()
+            self.command_history.append(self.arrow_id)
+            self.arrow_id = None
+
+        print(self.command_history)
+    
+    # -- Toolbar Commands -- 
     def on_exit_btn(self):
         print("Button 1 clicked")
         # Destroy EditMenu and EditMenuGlass
@@ -339,6 +376,9 @@ class EditMenu(ctk.CTkToplevel):
         print("Color button clicked")
 
         pick_color = AskColor()
+        pick_color.attributes("-topmost", True)
+        pick_color.lift(self)
+        pick_color.focus_force()
         color = pick_color.get()
 
         if color:
@@ -350,13 +390,28 @@ class EditMenu(ctk.CTkToplevel):
         print("Shapes button clicked")
 
     def on_revert_btn(self):
-        pass  # TODO
+        #self.revert_count += 1
+        
+        # Revert btn pressed -> Pops last index from 
+        # command_history[]
+        match len(self.command_history):
+            case length if length != 0: 
+                last_command = self.command_history.pop()
+                self.canvas.delete(last_command)
+                self.update_idletasks()
+                #print(f"Revert Count: {self.revert_count}")
+                print(self.command_history)
+            case length if length == 0: 
+                #self.revert_count = 0
+                pass
 
-    def set_rectangle(self):
-        print("Rectangle selected")
-
+    def set_rectangle(self): 
+        self.rectangle_is_set = True
+        self.arrow_is_set = False
+        
     def set_arrow(self):
-        print("Arrow selected")
+        self.arrow_is_set = True
+        self.rectangle_is_set = False
 
     def on_dropdown_select(self, command):
         command()
