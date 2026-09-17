@@ -4,6 +4,7 @@ import customtkinter as ctk
 import tkinter as tk
 from PIL import ImageGrab
 import ctypes
+from edit_menu import EditMenu
 
 # Load the two Windows DLLs used to detect the real display scale factor
 _user32 = ctypes.windll.user32
@@ -168,10 +169,10 @@ class EditPopUp(ctk.CTkToplevel):
         self.screenshot = None  # will be set on release
 
         self.geometry(f"{self.WIDTH}x{self.HEIGHT}")
-        save_btn = ctk.CTkButton(self, text="Save", fg_color="blue", command=self.save_screenshot)
+        save_btn = ctk.CTkButton(self, text="Save", fg_color="blue", command=self.on_save_btn)
         save_btn.pack(side="left")
 
-        edit_btn = ctk.CTkButton(self, text="Edit", fg_color="blue")
+        edit_btn = ctk.CTkButton(self, text="Edit", fg_color="blue", command=self.on_edit_btn)
         edit_btn.pack(side="right")
 
         self.withdraw()  # hidden until a valid selection is released
@@ -194,15 +195,15 @@ class EditPopUp(ctk.CTkToplevel):
     def set_screenshot(self, screenshot):
         self.screenshot = screenshot
 
-    def save_screenshot(self):
+    def on_save_btn(self):
         if self.screenshot is not None:
             self.screenshot.save("screenshot.png")
             print("Saved screenshot.png")
 
-    def on_edit(self): 
-        # Has to pass screenshot to edit_menu and 
-        # open edit_menu
-        pass
+    def on_edit_btn(self): 
+        # Opens EditMenu and passes screenshot to it
+        self.hide() # hides the screenshot pop up
+        EditMenu(self, self.screenshot)
 
 
 
@@ -339,9 +340,6 @@ class CaptureOverlay:
 
         self.start_x = self.start_y = 0
 
-        self.border_window.bind("<Escape>", self.close)
-        self.glass_window.bind("<Escape>", self.close)
-
         self._stack_job = None
         self._keep_border_on_top()
 
@@ -410,10 +408,9 @@ class CaptureOverlay:
             s = self.dpi_scale
             bbox = (int(x1 * s), int(y1 * s), int(x2 * s), int(y2 * s))
             screenshot = ImageGrab.grab(bbox=bbox)
-            self.pop_up.set_screenshot(screenshot) # sends image to popup; "save" happens when save button is pressed
-            # You're going to have to find a way to send this screenshot to the edit_menu and convert
-            # it to a Photo Image so Canvas can use it. Probably just import this class into the
-            # edit_menu file and insert the screenshot directly into the photo image method that way. 
+            # sends image to popup; "save" happens when save button is pressed; 
+            # passes screenshot to edit menu canvas when "edit" button is pressed
+            self.pop_up.set_screenshot(screenshot) 
             self.selection_box.show_at(x1, y1, x2, y2)
 
             # Only now — after a real selection was captured on release —
