@@ -4,7 +4,7 @@ import customtkinter as ctk
 import tkinter as tk
 from PIL import ImageGrab
 import ctypes
-from edit_menu import EditMenu
+from edit_menu import EditMenu, EditMenuGlassWindow
 
 # Load the two Windows DLLs used to detect the real display scale factor
 _user32 = ctypes.windll.user32
@@ -161,12 +161,13 @@ class EditPopUp(ctk.CTkToplevel):
     WIDTH = 300
     HEIGHT = 50
 
-    def __init__(self, master):
+    def __init__(self, master, launch_edit_menu=None, save_screenshot=None):
         super().__init__(master)
         self.overrideredirect(True)
         self.attributes("-topmost", True)
 
-        self.screenshot = None  # will be set on release
+        self._launch_edit_menu = launch_edit_menu
+        self._save_screenshot = save_screenshot
 
         self.geometry(f"{self.WIDTH}x{self.HEIGHT}")
         save_btn = ctk.CTkButton(self, text="Save", fg_color="blue", command=self.on_save_btn)
@@ -192,18 +193,18 @@ class EditPopUp(ctk.CTkToplevel):
     def hide(self):
         self.withdraw()
 
-    def set_screenshot(self, screenshot):
-        self.screenshot = screenshot
-
     def on_save_btn(self):
-        if self.screenshot is not None:
-            self.screenshot.save("screenshot.png")
-            print("Saved screenshot.png")
+        # if self.screenshot is not None:
+        #     self.screenshot.save("screenshot.png")
+        #     print("Saved screenshot.png")
+        self._save_screenshot()
 
     def on_edit_btn(self): 
-        # Opens EditMenu and passes screenshot to it
-        self.hide() # hides the screenshot pop up
-        EditMenu(self, self.screenshot)
+        # Opens EditMenu and EditMenuGlassWindow
+        self._launch_edit_menu()
+       
+        
+        
 
 
 
@@ -314,6 +315,7 @@ class CloseToggleTab(ctk.CTkToplevel):
 class CaptureOverlay:
     """Owns all six windows, keeps them stacked correctly, closes them together."""
     def __init__(self, master, border_color="#FF5733", border_thickness=6):
+        self.master = master
         self.border_window = BorderWindow(master, border_color, border_thickness)
         self.selection_box = SelectionBox(master, color="red", thickness=2)
         self.glass_window = GlassWindow(
@@ -322,8 +324,13 @@ class CaptureOverlay:
             on_drag=self._on_drag,
             on_release=self._on_release,
         )
+        self.pop_up = EditPopUp(
+            master, 
+            launch_edit_menu=self._launch_edit_menu)
         self.dpi_scale = get_dpi_scale()  # scale factor to fix screenshot cropping (see get_dpi_scale)
-        self.pop_up = EditPopUp(master)
+        
+
+        self.screenshot = None
 
         # Red "X" close control, docked to the right edge of the screen and
         # retractable via its own toggle tab. Both get pause/resume hooks
@@ -407,10 +414,10 @@ class CaptureOverlay:
             # as a smaller, shifted crop instead of the selected area.
             s = self.dpi_scale
             bbox = (int(x1 * s), int(y1 * s), int(x2 * s), int(y2 * s))
-            screenshot = ImageGrab.grab(bbox=bbox)
+            self.screenshot = ImageGrab.grab(bbox=bbox)
             # sends image to popup; "save" happens when save button is pressed; 
             # passes screenshot to edit menu canvas when "edit" button is pressed
-            self.pop_up.set_screenshot(screenshot) 
+            # self.pop_up.set_screenshot(self.screenshot) 
             self.selection_box.show_at(x1, y1, x2, y2)
 
             # Only now — after a real selection was captured on release —
@@ -419,6 +426,43 @@ class CaptureOverlay:
             self.pop_up.show_at(x2, y2)
         else:
             self.selection_box.hide()
+
+    def _save_screenshot(self): 
+        if self.screenshot is not None:
+            self.screenshot.save("screenshot.png")
+            print("Saved screenshot.png")
+
+    def _launch_edit_menu(self): 
+        # Makes everything invisible except for border_window
+        self._pause_stacking()
+        self.glass_window.withdraw()
+        self.selection_box.hide()
+        self.pop_up.hide()
+        self.close_button.withdraw()
+        self.close_toggle.withdraw()
+        # Create an invisble window that catches clicks; placed above border_window
+        # and below edit_menu
+        self.edit_glass = EditMenuGlassWindow(self.master)
+        self.edit_glass.lift(self.border_window)
+
+        self.edit_menu = EditMenu(self.master, self.screenshot, self._close_edit_menu_and_glass)
+        self.edit_menu.attributes("-topmost", True)
+        self.edit_menu.focus_force()
+
+    def _close_edit_menu_and_glass(self): 
+        """Closes EditMenu and EditMenuGlass and undos withdraw for the stack"""
+        self.edit_glass.destroy()
+        self.edit_menu.destroy()
+
+        self.glass_window.deiconify()
+        self.close_button.deiconify()
+        self.close_toggle.deiconify()
+        self._resume_stacking()
+
+
+
+
+    
 
     def close(self, event=None):
         if self._stack_job is not None:

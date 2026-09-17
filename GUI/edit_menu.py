@@ -33,6 +33,15 @@ from PIL import Image, ImageTk, ImageDraw, ImageGrab
 from CTkColorPicker import *
 
 
+class EditMenuGlassWindow(ctk.CTkToplevel): 
+    def __init__(self, master): 
+        super().__init__(master)
+        self.attributes("-fullscreen", True)
+        self.overrideredirect(True)
+        self.attributes("-alpha", 0.02)
+        self.attributes("-disabled", True)
+
+
 class DropdownButton(ctk.CTkFrame):
     """
     A self-contained dropdown widget for use inside the toolbar: a main
@@ -127,11 +136,12 @@ class EditMenu(ctk.CTkToplevel):
     TOOLBAR_BUTTON_HEIGHT = 40
     TOOLBAR_BUTTON_COUNT = 5
 
-    def __init__(self, master, img):
+    def __init__(self, master, img, close_edit_menu_and_glass=None):
         super().__init__(master)
 
         # Get screenshot to pass to canvas from screenshot_window's EditPopUp
         self.img = img
+        self._close_edit_menu_and_glass = close_edit_menu_and_glass
     
         # -- Compute dynamic window size --
         # The image area defaults to DEFAULT_IMAGE_WIDTH x
@@ -149,7 +159,6 @@ class EditMenu(ctk.CTkToplevel):
         self.image_x = 0
         self.image_y = 0
 
-        self.title("Edit Menu")
         self._center_on_screen()
         self.resizable(False, False)
 
@@ -297,7 +306,9 @@ class EditMenu(ctk.CTkToplevel):
     # -- Placeholder command handlers (print-only, for wiring/testing) --
     def on_exit_btn(self):
         print("Button 1 clicked")
-        self.destroy()  # close the edit menu window
+        # Destroy EditMenu and EditMenuGlass
+        if self._close_edit_menu_and_glass: 
+            self._close_edit_menu_and_glass()
 
     def on_save_btn(self):
         print("Button 2 clicked")
@@ -319,7 +330,10 @@ class EditMenu(ctk.CTkToplevel):
 
         self.saved_img = ImageGrab.grab(bbox=(x0, y0, x1, y1))
         self.saved_img.save("screenshot.png")
-        self.destroy()  # close the edit menu window
+
+        # Destroy Edit Menu and EditMenuGlass
+        if self._close_edit_menu_and_glass:
+            self._close_edit_menu_and_glass()
 
     def on_color_btn(self):
         print("Color button clicked")
@@ -338,11 +352,11 @@ class EditMenu(ctk.CTkToplevel):
     def on_revert_btn(self):
         pass  # TODO
 
-    def on_edit_option_a(self):
-        print("Edit Option A selected")
+    def set_rectangle(self):
+        print("Rectangle selected")
 
-    def on_edit_option_b(self):
-        print("Edit Option B selected")
+    def set_arrow(self):
+        print("Arrow selected")
 
     def on_dropdown_select(self, command):
         command()
