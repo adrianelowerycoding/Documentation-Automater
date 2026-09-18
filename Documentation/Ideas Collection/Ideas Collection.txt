@@ -23,6 +23,11 @@ Proposed Ideas/Additions:
             - Exit: "Exit without saving?" popup
             - Save: ImageGrab() the frame coordinates and 
             apply the naming convention. 
+
+    - Transcription: 
+        - Use Faster Whisper instead of Whisper.cpp 
+        - Time stamp each detected word so it's easier to apply markdown state to a string of connected words. 
+            - Text button click from main_side_menu sets state for each word while flag lives.
             
 
 
@@ -31,7 +36,7 @@ Accepted Ideas:
 
    - Create an ultra-compliant enterprise version that can be used at a majority of work places.
         - No key logging, only GUI clicking. 
-        - Still allow voice transcription since whisper is safe and it's a core component to 
+        - Still allow voice transcription since faster whisper is safe and it's a core component to 
         automating documenation.
         - Don't include mouse element capture (like in Steps Recorder)
         - Replace SQL lite database for user profiles with json file for project files.
