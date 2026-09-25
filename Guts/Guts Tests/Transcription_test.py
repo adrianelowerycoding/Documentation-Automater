@@ -1,3 +1,9 @@
+"""
+This test shows how to record a set amount of time with sounddevice and convert 
+transcribe the audio sample with faster whisper
+"""
+
+
 import numpy as np
 import sounddevice as sd
 from faster_whisper import WhisperModel

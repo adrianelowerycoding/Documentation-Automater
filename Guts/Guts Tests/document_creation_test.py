@@ -46,10 +46,10 @@ class Block:
 #
 # Events[] list is the merged list that holds both word[] and button_history[] dict
 # values. Each event in the list is (timestamp_in_seconds, event_type, value)
-#   - Rows with kind == "word" stand in for entries from words[] dict
+#   - Rows with kind == "word" stand in for entries from words{} dict
 #     (word + timestamp)
 #   - All other rows (heading, bullet, italic_on/off, bold_on/off, enter)
-#     stand in for entries from buttons[] dict (button type + click
+#     stand in for entries from buttons{} dict (button type + click
 #     timestamp)
 #
 # Create the merged list with something like this:
