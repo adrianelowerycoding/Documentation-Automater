@@ -1,7 +1,7 @@
 """
 This test shows how to record live audio until the user hits the "stop" button. 
 The dynamic-sized audio sample is then transcribed by faster whisper and a 
-word{} dictionary is created.
+word[] list is created.
 """
 import threading
 import keyboard
@@ -44,7 +44,7 @@ segments, info = model.transcribe(audio, word_timestamps=True)
 
 for segment in segments:
     for word in segment.words:
-        words.append((word.start, word.word)) # Create a list of tuples; (timestamp, word)
+        words.append((word.start, "word", word.word)) # Create a list of tuples; (timestamp, word)
        # print(f"{word.start} | {word.word}")
 
 print(words)
