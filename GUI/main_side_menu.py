@@ -25,13 +25,23 @@ is created, which calls a method from one of the "Options" dictionaries in MainS
 
 """
 
-
+import sys
+from pathlib import Path
 import ctypes                  # used to disable DPI scaling awareness
 import os                      
 import customtkinter as ctk    
 import constants                # shared color/style values used across the app
 from PIL import Image 
 from screenshot_window import CaptureOverlay
+
+# needed to import local sibling modules
+parent_dir = Path(__file__).resolve().parent.parent
+
+if str(parent_dir) not in sys.path:
+    sys.path.append(str(parent_dir))
+
+from Guts.Controller import Controller
+
 
 # Force DPI-unaware: Windows will bitmap-scale the window instead of
 # letting it react to the real monitor DPI. This avoids the
@@ -69,6 +79,9 @@ class MainSideMenu(ctk.CTkToplevel):
 
     def __init__(self, master):
         super().__init__(master)
+
+        # Connecting MainSideMenu and Controller commands
+        self.controller = Controller()
 
         # Collapsed = button_bar's whole window hidden, not resized. The
         # toggle button lives in its own separate window (toggle_win below).
@@ -257,15 +270,19 @@ class MainSideMenu(ctk.CTkToplevel):
 
     def on_heading_1(self):
         print("H1 clicked")
+        self.controller.on_heading(1) # Sending heading_value to controller
 
     def on_heading_2(self):
         print("H2 clicked")
+        self.controller.on_heading(2)
 
     def on_heading_3(self):
         print("H3 clicked")
+        self.controller.on_heading(3)
 
     def on_heading_4(self):
         print("H4 clicked")
+        self.controller.on_heading(4)
 
     def on_bullet_1(self):
         print("Bullet 1 clicked")
