@@ -295,12 +295,14 @@ class MainSideMenu(ctk.CTkToplevel):
 
     def on_italics(self):
         print("italics clicked")
+        self.controller.on_italic()
 
     def on_bullet(self):
         print("bullet clicked")
 
     def on_arrow(self):
         print("arrow clicked")
+        self.controller.on_arrow()
 
     def on_camera(self):
         print("camera clicked")

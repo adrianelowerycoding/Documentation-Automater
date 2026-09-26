@@ -15,6 +15,8 @@ class Controller():
         self.segment_start = None
         self.is_recording = False
         self.heading_on = False
+        self.arrow_on = False
+        self.italic_on = False
 
     def on_heading(self, heading_value): 
         if self.is_recording and not self.heading_on:
@@ -29,8 +31,31 @@ class Controller():
 
 
         # Italic()
+    def on_italic(self):
+        if self.is_recording and not self.italic_on:
+            self.button_history.append((self.get_active_timestamp(), "italic_on", None))
+            self.italic_on = True
+            print(self.button_history)
+
+        elif self.is_recording:
+            self.button_history.append((self.get_active_timestamp(), "italic_off", None))
+            self.italic_on = False
+            print(self.button_history)
+
         # Bullet()
-        # Arrow() 
+    def on_arrow(self): 
+        if self.is_recording and not self.arrow_on:
+            self.button_history.append((self.get_active_timestamp(), "arrow_segment_on", None))
+            self.arrow_on = True
+            print(self.button_history)
+
+        elif self.is_recording: 
+            self.button_history.append((self.get_active_timestamp(), "arrow_segment_off", None))
+            self.arrow_on = False
+            print(self.button_history)
+
+
+
         # Camera() (pause_recording())
         # Add something about saving screenshot data into button_history[] 
 
