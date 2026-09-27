@@ -1,7 +1,16 @@
+import sys
+from pathlib import Path
+import os
 import numpy as np
 import sounddevice as sd
 import time
-from Transcription import Transcription
+
+# parent_dir = Path(__file__).resolve().parent.parent
+
+# if str(parent_dir) not in sys.path:
+#     sys.path.append(str(parent_dir))
+
+from Guts.Transcription import Transcription
 
 class Controller(): 
     def __init__(self): 
@@ -114,6 +123,10 @@ class Controller():
             print(self.button_history)
 
 
+    def sct_save(self): 
+        # receive the pixel data and save the photo 
+        # add filepath to the button_history[] list
+
 
         # Camera() (pause_recording())
         # Add something about saving screenshot data into button_history[] 
@@ -121,6 +134,7 @@ class Controller():
             # so everytime you save a screenshot you capture timestamp and the filepath name
         # Each sct should have block_end element before it AND after it, since all 
         # screenshots are their own block. 
+        pass
 
      
 

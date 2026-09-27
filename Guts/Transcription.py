@@ -5,18 +5,14 @@ passes the words[] list to Controller.
 from faster_whisper import WhisperModel
 
 class Transcription(): 
-    def __init__(self, audio): 
-        super.__init__() 
-
-        self.audio = audio
+    def __init__(self): 
         self.words = []
 
-
-    def transcribe(self): 
+    def transcribe(self, audio): 
         model = WhisperModel("small.en", device="cpu", compute_type="int8")
         print("Model loaded")
 
-        segments, info = model.transcribe(self.audio, word_timestamps=True)
+        segments, info = model.transcribe(audio, word_timestamps=True)
 
         for segment in segments: 
             for word in segment.words: 
