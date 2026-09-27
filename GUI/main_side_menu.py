@@ -148,8 +148,7 @@ class MainSideMenu(ctk.CTkToplevel):
     
         self.bullet_options = {
             "●": self.on_bullet_1,
-            "◆": self.on_bullet_2,
-            "■": self.on_bullet_3,
+            "1,2,3": self.on_bullet_2,
         }
 
         # -- Button Creation Information -- 
@@ -286,12 +285,11 @@ class MainSideMenu(ctk.CTkToplevel):
 
     def on_bullet_1(self):
         print("Bullet 1 clicked")
+        self.controller.on_bullet("unordered")
 
     def on_bullet_2(self):
         print("Bullet 2 clicked")
-
-    def on_bullet_3(self):
-        print("Bullet 3 clicked")
+        self.controller.on_bullet("numbered")
 
     def on_italics(self):
         print("italics clicked")

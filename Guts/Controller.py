@@ -17,20 +17,26 @@ class Controller():
         self.heading_on = False
         self.arrow_on = False
         self.italic_on = False
+        self.bullet_on = False
+
+    def block_end(self): 
+        self.button_history.append((self.get_active_timestamp(), "block_end", None))
 
     def on_heading(self, heading_value): 
+
+        # If there was a pgh before this heading block then you insert a "end" element in list 
+        # and then insert a "heading_on" element in list right after. 
         if self.is_recording and not self.heading_on:
-            self.button_history.append((self.get_active_timestamp(), "heading_on", heading_value))
+            self.block_end()
+            self.button_history.append((self.get_active_timestamp(), "heading", heading_value))
             self.heading_on = True
             print(self.button_history)
 
         elif self.is_recording: 
-            self.button_history.append((self.get_active_timestamp(), "heading_off", None))
+            self.block_end()
             self.heading_on = False
             print(self.button_history)
 
-
-        # Italic()
     def on_italic(self):
         if self.is_recording and not self.italic_on:
             self.button_history.append((self.get_active_timestamp(), "italic_on", None))
@@ -42,7 +48,18 @@ class Controller():
             self.italic_on = False
             print(self.button_history)
 
-        # Bullet()
+    def on_bullet(self, bullet_style): 
+        if self.is_recording and not self.bullet_on:
+            self.block_end()
+            self.button_history.append((self.get_active_timestamp(), "bullet", bullet_style))
+            self.italic_on = True
+            print(self.button_history)
+        
+        elif self.is_recording:
+            self.block_end()
+            self.italic_on = False
+            print(self.button_history)
+
     def on_arrow(self): 
         if self.is_recording and not self.arrow_on:
             self.button_history.append((self.get_active_timestamp(), "arrow_segment_on", None))
