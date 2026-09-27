@@ -5,6 +5,7 @@ import constants
 from recording_state import RecordingState
 from main_side_menu import MainSideMenu
 from new_guide_window import NewGuideWindow
+from Guts.Controller import Controller
 
 """
 CURRENT PROB: After I save or clear the first file all of the "disableds" are turned off. I'm able to click the pause, stop, save, and clear buttons.
@@ -68,6 +69,7 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
         self.main_side_menu = None # Tracking toplevel for on_click_record
         self.new_guide_window = None # Tracking toplevel for on_click_new_guide
         self.current_guide_path = None # Folder of the guide the user just made
+        self.controller = None # the ONE Controller for the current recording session - built in on_click_record
         # -- Prepping Page --
         ## -- Layout: top bar, top spacer, title, output, recording, save/clear, bottom spacer, status bar --
         self.columnconfigure(0, weight=1) # only 1 column, this keeps everything centered in the window
@@ -80,8 +82,8 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
         self.rowconfigure(6, weight=1) # row 6: Bottom spacer
         self.rowconfigure(7, weight=0) # row 7: status_bar (project + guide loaded)
 
-        ## -- Creating ribbon across the top of the page, New Guide button sits in it --
-        ## (the toggle button lives in the header above this, so they never overlap)
+        ## -- Ribbon across the top, New Guide button lives here --
+        ## (toggle button is up in the header above this, so they don't stack on each other anymore)
         top_bar = ctk.CTkFrame(self, height=44, corner_radius=0)
         top_bar.grid(row=0, column=0, sticky="ew")
 
@@ -99,7 +101,7 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
         status_bar = ctk.CTkFrame(self, height=28, corner_radius=0)
         status_bar.grid(row=7, column=0, sticky="ew")
 
-        # Small gray text so it stays out of the way
+        # keeping this small and gray so it doesn't fight the title for attention
         self.loaded_label = ctk.CTkLabel(status_bar, text="Project Loaded: None | Current Guide: None", font=("Arial", 12), text_color="gray60")
         self.loaded_label.grid(row=0, column=0, padx=10, pady=4, sticky="w")
 
@@ -139,7 +141,7 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
             )
         self.output_btn.grid(row=3, column=0, pady=(0,10))
 
-        # Record starts out disabled, it turns on once a project and guide are loaded
+        # record starts disabled, on_guide_created flips it on once you actually have a guide to record into
         self.record_btn = self.make_recording_button(recording_button_frame,"●",self.on_click_record, "disabled", 0)
         self.pause_btn = self.make_recording_button(recording_button_frame,"⏸",self.on_click_pause, "disabled",1)
         self.stop_btn = self.make_recording_button(recording_button_frame,"⏹",self.on_click_stop, "disabled", 2)
@@ -194,16 +196,16 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
             self.new_guide_window.lift()
 
     def on_guide_created(self, guide_path):
-        # Runs when the user hits Create. Saving the guide folder so recording can use it later
+        # fires when Create is clicked in NewGuideWindow, stashing the path for the recording side to use
         self.current_guide_path = guide_path
 
-        # Guide folder's parent is the project folder, so we get both names from the path
+        # parent of the guide folder IS the project folder so this grabs both names in one shot
         project_name = guide_path.parent.name
         guide_name = guide_path.name
         self.loaded_label.configure(text=f"Project Loaded: {project_name} | Current Guide: {guide_name}", text_color=("gray10", "gray90"))
 
-        # Turn Record on, but only if we're not in the middle of a recording
-        # (self.state doesn't exist until set_state runs, so getattr gives None before that)
+        # don't flip Record on if a recording is already happening
+        # (self.state doesn't exist til set_state() runs once, hence the getattr instead of self.state directly)
         if getattr(self, "state", None) in (None, RecordingState.SAVED, RecordingState.CLEARED):
             self.record_btn.configure(state="normal")
 
@@ -212,7 +214,10 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
         self.set_state(RecordingState.RECORDING)
         # If main_side_menu isn't open, open it and lift it
         if self.main_side_menu is None or not self.main_side_menu.winfo_exists():
-            self.main_side_menu = MainSideMenu(self)
+            # only making ONE Controller now, right here. gets passed down to MainSideMenu,
+            # then to CaptureOverlay/EditMenu - nothing else builds its own anymore
+            self.controller = Controller(self.current_guide_path)
+            self.main_side_menu = MainSideMenu(self, controller=self.controller)
         else:
             self.main_side_menu.lift()
 

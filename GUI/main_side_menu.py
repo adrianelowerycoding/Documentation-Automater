@@ -1,73 +1,63 @@
 """
-What this is: 
+What this is:
 
 This is the main side menu that lets you actively format the text your speech transcribes to and take screenshots whenever you
-want. When you hit "record" on the home page the main side menu opens up on the right middle of the screen and is instantly 
-ready to be used. 
+want. When you hit "record" on the home page the main side menu opens up on the right middle of the screen and is instantly
+ready to be used.
 
-It consists of 2 classes: The MainSideMenu class and the DropdownButton class. The MainSideMenu class is a Top Level that is 
+It consists of 2 classes: The MainSideMenu class and the DropdownButton class. The MainSideMenu class is a Top Level that is
 a child of the App class. It holds the frame button_bar which holds the text format and screenshot buttons. It also holds the
 side menu toggle button, a mini Top Level that sits right beside the button_bar, which is used to collapse and expand the main
 side menu.
 
-The DropdownButton class is a child class of MainSideMenu and is a frame. The DropdownButton frame holds drop down buttons, 
-and each drop down button holds a child frame called a dropdown menu. Each drop down menu holds a menu of options associated 
-with its drop down button. 
+The DropdownButton class is a child class of MainSideMenu and is a frame. The DropdownButton frame holds drop down buttons,
+and each drop down button holds a child frame called a dropdown menu. Each drop down menu holds a menu of options associated
+with its drop down button.
 
-Workflow: 
+Workflow:
 
-MainSideMenu determines where on the screen to build its frame, creates its frame, immediately creates its toggle button, then 
-begins creating the menu buttons to fill its frame. It pulls the buttons to create from a list of dictionaries defined in its body. 
+MainSideMenu determines where on the screen to build its frame, creates its frame, immediately creates its toggle button, then
+begins creating the menu buttons to fill its frame. It pulls the buttons to create from a list of dictionaries defined in its body.
 Depending on the button's type it will either create a regular button or an instance of the DropdownButton class (a drop down button).
 A drop down button basically has two commands: 1. The official CTkButton command that's given when the button is created which
 creates the drop down menu frame when the button is pressed, and 2. The callback function passed when the instance of DropdownButton
-is created, which calls a method from one of the "Options" dictionaries in MainSideMenu. 
+is created, which calls a method from one of the "Options" dictionaries in MainSideMenu.
 
 """
 
-import sys
-from pathlib import Path
 import ctypes                  # used to disable DPI scaling awareness
-import os                      
-import customtkinter as ctk    
+import os
+import customtkinter as ctk
 import constants                # shared color/style values used across the app
-from PIL import Image 
+from PIL import Image
 from screenshot_window import CaptureOverlay
-
-# needed to import local sibling modules
-parent_dir = Path(__file__).resolve().parent.parent
-
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
-
-from Guts.Controller import Controller
 
 
 # Force DPI-unaware: Windows will bitmap-scale the window instead of
 # letting it react to the real monitor DPI. This avoids the
 # Tk scaling-sync bugs by never exposing it to anything other than 100%.
 # WARNING: This means the main side menu will stretch to meet the scaled
-# % of a display - it won't scale to the display. So the side menu will 
-# be much larger on a laptop display than on a PC. 
+# % of a display - it won't scale to the display. So the side menu will
+# be much larger on a laptop display than on a PC.
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(0)  # PROCESS_DPI_UNAWARE
 except Exception as e:
     print("shcore failed:", e)
 
 
-# -- Setting icons path -- 
+# -- Setting icons path --
 GUI_DIR = os.path.dirname(os.path.abspath(__file__))
-print(GUI_DIR)  
-ASSETS_DIR = os.path.join(GUI_DIR, "..","Assets")  
+print(GUI_DIR)
+ASSETS_DIR = os.path.join(GUI_DIR, "..","Assets")
 
-# -- Icon paths -- 
+# -- Icon paths --
 HEADING_ICON_PATH = os.path.join(ASSETS_DIR, "Heading_icon.png")
 ITALICS_ICON_PATH = os.path.join(ASSETS_DIR, "Italics_icon.png")
 CAMERA_ICON_PATH = os.path.join(ASSETS_DIR, "Camera_icon.png")
 BULLET_ICON_PATH = os.path.join(ASSETS_DIR, "bullet_point_icon.png")
 ARROW_ICON_PATH = os.path.join(ASSETS_DIR, "arrow_icon.png")
 
-# -- Classes -- 
+# -- Classes --
 class MainSideMenu(ctk.CTkToplevel):
     """
     The slide-out formatting toolbar. Owns two windows: `self` (this
@@ -77,11 +67,13 @@ class MainSideMenu(ctk.CTkToplevel):
     a widget inside this one.
     """
 
-    def __init__(self, master):
+    def __init__(self, master, controller):
         super().__init__(master)
 
-        # Connecting MainSideMenu and Controller commands
-        self.controller = Controller()
+        # not building a Controller anymore, just taking the one HomePage already made.
+        # gets passed again to CaptureOverlay/EditMenu down in on_camera - so headings,
+        # bullets, and screenshots all land in the same button_history instead of 3 separate ones
+        self.controller = controller
 
         # Collapsed = button_bar's whole window hidden, not resized. The
         # toggle button lives in its own separate window (toggle_win below).
@@ -137,22 +129,22 @@ class MainSideMenu(ctk.CTkToplevel):
         self.after(150, self.position_toggle)  # ...and again after DPI settles
 
 
-        # -- Dropdown Buttons Information -- 
-        # Naming convention and callback methods for each drop down button. 
+        # -- Dropdown Buttons Information --
+        # Naming convention and callback methods for each drop down button.
         self.heading_options = {
                 "H1": self.on_heading_1,
                 "H2": self.on_heading_2,
                 "H3": self.on_heading_3,
                 "H4": self.on_heading_4,
             }
-    
+
         self.bullet_options = {
             "●": self.on_bullet_1,
             "1,2,3": self.on_bullet_2,
         }
 
-        # -- Button Creation Information -- 
-        # List of dictionaries that hold all needed info for normal and drop down buttons. 
+        # -- Button Creation Information --
+        # List of dictionaries that hold all needed info for normal and drop down buttons.
         buttons = [
             {"type": "dropdown", "name": "heading", "icon": self.heading_icon, "options": self.heading_options},
             {"type": "button", "name": "italics", "icon": self.italics_icon, "command": self.on_italics},
@@ -163,21 +155,21 @@ class MainSideMenu(ctk.CTkToplevel):
 
         divider_color = "#D3D3D3"
         row = 0
-        for i, entry in enumerate(buttons): 
+        for i, entry in enumerate(buttons):
             self.button_bar.grid_rowconfigure(row, weight=1, uniform="btn_row")  # equal height per button row
 
-            if entry["type"] == "button": 
-                try: 
+            if entry["type"] == "button":
+                try:
                     # Plain buttons need a command; build it and place it in this row.
                     self.make_button(entry.get("icon"), entry["command"], "normal", row)
-                except KeyError: 
+                except KeyError:
                     # No command was supplied for this entry - skip it rather than crash.
                     print(f"{entry.get("name")} button has no command." )
                     continue
-            else: 
+            else:
                 # Dropdown entries get their own self-contained widget
                 # instead of a plain button.
-                dropdown = DropdownButton( 
+                dropdown = DropdownButton(
                             self.button_bar,
                             icon=entry["icon"],
                             options=entry["options"],
@@ -260,7 +252,7 @@ class MainSideMenu(ctk.CTkToplevel):
 
     # --- Command handlers for button_bar's buttons/dropdown options ---
     # These are placeholders for now - each just prints so wiring can be
-    # tested before the real formatting logic can be made. 
+    # tested before the real formatting logic can be made.
     # Kept as separate methods (rather than one shared
     # handler) so each can grow independently later without touching callers.
 
@@ -311,10 +303,11 @@ class MainSideMenu(ctk.CTkToplevel):
         # would.
         self.toggle_collapse()
         if self.screenshot_window is None or not self.screenshot_window.winfo_exists():
-            self.screenshot_window = CaptureOverlay(self)
-        else: 
+            # just passing the same controller one level further down
+            self.screenshot_window = CaptureOverlay(self, controller=self.controller)
+        else:
             self.screenshot_window.lift()
- 
+
 
 
 class DropdownButton(ctk.CTkFrame): # DropdownButton IS a frame; its parent is MainSideMenu
@@ -347,7 +340,7 @@ class DropdownButton(ctk.CTkFrame): # DropdownButton IS a frame; its parent is M
         self.main_button.pack(fill="both", expand=True)  # stretch to the width of the parent frame
 
     def toggle_menu(self):
-        # Opens or closes dropdown_menu 
+        # Opens or closes dropdown_menu
         if self.menu_open:
             self.close_menu()
         else:
@@ -377,8 +370,8 @@ class DropdownButton(ctk.CTkFrame): # DropdownButton IS a frame; its parent is M
                 text=k,                               # this button's own label is the option text
                 fg_color="transparent",               # blends into menu_frame until hovered
                 text_color=("black", "white"),        # readable in both appearance modes
-                hover_color=("gray80", "gray30"),     
-                anchor="w",                           
+                hover_color=("gray80", "gray30"),
+                anchor="w",
                 # default-arg trick: binds *this* option now, not the last
                 # value of the loop variable when the button is later clicked
                 command=lambda name=k, cmd=v: self.select_option(name, cmd),
@@ -401,7 +394,7 @@ class DropdownButton(ctk.CTkFrame): # DropdownButton IS a frame; its parent is M
         if self.callback:                        # calls callback from MainSideMenu "Options" dictionary, IF user provided one
             self.callback(command)
 
-# -- Callback methods -- 
+# -- Callback methods --
 def on_dropdown_select(command):
     # command = the value passed up from DropdownButton.select_option()
     # (this is the dict value for whatever key the user clicked, e.g. self.on_heading_1)

@@ -13,8 +13,11 @@ import time
 from Guts.Transcription import Transcription
 
 class Controller(): 
-    def __init__(self): 
+    def __init__(self, guide_path): 
         super().__init__()
+
+        # path to current guide folder
+        self.guide_path = Path(guide_path)
 
         self.sample_rate = 1600
         self.chunks = []
@@ -29,6 +32,14 @@ class Controller():
         self.arrow_on = False
         self.italic_on = False
         self.bullet_on = False
+        self.in_sct_mode = False
+
+        # screenshots folder for this guide
+        self.sct_dir = self.guide_path / "screenshots"
+        # make the folder if it's not there yet
+        self.sct_dir.mkdir(parents=True, exist_ok=True)
+        # counts each screenshot saved
+        self.sct_counter = 0
 
         self.transcribe = Transcription()
 
@@ -123,31 +134,25 @@ class Controller():
             print(self.button_history)
 
 
-    def sct_save(self): 
-        # receive the pixel data and save the photo 
+    def sct_save(self, screenshot): 
+        # receive the ImageGrab data and save the photo 
         # add filepath to the button_history[] list
+        self.in_sct_mode = True
 
+        # bump count for this screenshot
+        self.sct_counter += 1
+        filename = f"sct_{self.sct_counter}.png"
+        # full path to save to
+        filepath = self.sct_dir / filename
 
-        # Camera() (pause_recording())
-        # Add something about saving screenshot data into button_history[] 
-        # (timestamp, "sct", filepath); for each sct that's taken during the sct time. 
-            # so everytime you save a screenshot you capture timestamp and the filepath name
-        # Each sct should have block_end element before it AND after it, since all 
-        # screenshots are their own block. 
-        pass
+        screenshot.save(filepath)
 
-     
+        # log timestamp + path
+        self.button_history.append((timestamp, "screenshot", str(filepath)))
+
+        return filepath
 
     def get_active_timestamp(self): 
         if self.is_recording: 
             return round(self.accumulated + (time.perf_counter() - self.segment_start), 2)
         return round(self.accumulated, 2)
-
-    
-
-
-
-
-
-
-
