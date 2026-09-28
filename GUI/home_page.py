@@ -218,6 +218,7 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
             # then to CaptureOverlay/EditMenu - nothing else builds its own anymore
             self.controller = Controller(self.current_guide_path)
             self.main_side_menu = MainSideMenu(self, controller=self.controller)
+            self.controller.start_recording()
         else:
             self.main_side_menu.lift()
 

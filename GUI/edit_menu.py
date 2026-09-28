@@ -33,8 +33,8 @@ from PIL import Image, ImageTk, ImageDraw, ImageGrab
 from CTkColorPicker import *
 
 
-class EditMenuGlassWindow(ctk.CTkToplevel): 
-    def __init__(self, master): 
+class EditMenuGlassWindow(ctk.CTkToplevel):
+    def __init__(self, master):
         super().__init__(master)
         self.attributes("-fullscreen", True)
         self.overrideredirect(True)
@@ -76,8 +76,8 @@ class DropdownButton(ctk.CTkFrame):
             self.open_menu()
 
     def open_menu(self):
-    
-        # Parent the dropdown menu popup to the whole window, not the toolbar button, so 
+
+        # Parent the dropdown menu popup to the whole window, not the toolbar button, so
         # it won't be constrained to the toolbar button's size/position.
         top_level = self.winfo_toplevel()  # get the top-level window containing this widget
         width = self.button_width
@@ -136,16 +136,18 @@ class EditMenu(ctk.CTkToplevel):
     TOOLBAR_BUTTON_HEIGHT = 40
     TOOLBAR_BUTTON_COUNT = 5
 
-    def __init__(self, master, img, close_edit_menu_and_glass=None):
+    def __init__(self, master, img, close_edit_menu_and_glass=None, controller=None):
         super().__init__(master)
 
+        # Pass Controller instance from screenshot_window's CaptureOverlay to EditMenu
+        self.controller = controller
         # Get screenshot to pass to canvas from screenshot_window's EditPopUp
         self.img = img
         self._close_edit_menu_and_glass = close_edit_menu_and_glass
         self.rectangle_is_set = False
         self.arrow_is_set = False
         self.command_history = []
-    
+
         # -- Compute dynamic window size --
         # The image area defaults to DEFAULT_IMAGE_WIDTH x
         # DEFAULT_IMAGE_HEIGHT, growing per-axis to fit the image if it's
@@ -200,12 +202,12 @@ class EditMenu(ctk.CTkToplevel):
         self.rect_id = None
         self.shape_color = "red"
 
-        # Bind mouse events 
+        # Bind mouse events
         self.canvas.bind("<Button-1>", self._on_press)
         self.canvas.bind("<B1-Motion>", self._on_drag)
         self.canvas.bind("<ButtonRelease-1>", self._on_release)
 
-    # -- Window and Toolbar creation methods -- 
+    # -- Window and Toolbar creation methods --
     def _center_on_screen(self):
         # Screen size in pixels, independent of this window's own size.
         screen_width = self.winfo_screenwidth()
@@ -286,10 +288,10 @@ class EditMenu(ctk.CTkToplevel):
                 )
                 dropdown.grid(row=row, column=0, sticky="nsew")
 
-    # -- Drawing methods -- 
+    # -- Drawing methods --
 
-    def _on_press(self, event): 
-        if self.rectangle_is_set: 
+    def _on_press(self, event):
+        if self.rectangle_is_set:
             self.start_x = event.x
             self.start_y = event.y
 
@@ -298,18 +300,18 @@ class EditMenu(ctk.CTkToplevel):
                 self.start_x, self.start_y, self.start_x, self.start_y,
                 outline=self.shape_color, width=2
             )
-        else: 
+        else:
             self.start_x = event.x
             self.start_y = event.y
             self.arrow_id = None
 
-    def _on_drag(self, event): 
+    def _on_drag(self, event):
         if self.rectangle_is_set:
             cur_x, cur_y = event.x, event.y
             self.canvas.coords(self.rect_id, self.start_x, self.start_y, cur_x, cur_y)
-        else: 
+        else:
              # Delete the previous frame's line so it doesn't leave trailing artifacts
-            if self.arrow_id: 
+            if self.arrow_id:
                 self.canvas.delete(self.arrow_id)
 
             # Draw a line from the original click point to the current mouse position
@@ -321,8 +323,8 @@ class EditMenu(ctk.CTkToplevel):
                 fill=self.shape_color
             )
 
-    def _on_release(self, event): 
-        
+    def _on_release(self, event):
+
         if self.rectangle_is_set:
 
             self.update_idletasks()
@@ -339,12 +341,12 @@ class EditMenu(ctk.CTkToplevel):
             self.arrow_id = None
 
         print(self.command_history)
-    
-    # -- Toolbar Commands -- 
+
+    # -- Toolbar Commands --
     def on_exit_btn(self):
         print("Button 1 clicked")
         # Destroy EditMenu and EditMenuGlass
-        if self._close_edit_menu_and_glass: 
+        if self._close_edit_menu_and_glass:
             self._close_edit_menu_and_glass()
 
     def on_save_btn(self):
@@ -366,7 +368,8 @@ class EditMenu(ctk.CTkToplevel):
         y1 = y0 + self.img.height
 
         self.saved_img = ImageGrab.grab(bbox=(x0, y0, x1, y1))
-        self.saved_img.save("screenshot.png")
+        self.controller.sct_save(self.saved_img)
+        # self.saved_img.save("screenshot.png")
 
         # Destroy Edit Menu and EditMenuGlass
         if self._close_edit_menu_and_glass:
@@ -391,28 +394,27 @@ class EditMenu(ctk.CTkToplevel):
 
     def on_revert_btn(self):
         #self.revert_count += 1
-        
-        # Revert btn pressed -> Pops last index from 
+
+        # Revert btn pressed -> Pops last index from
         # command_history[]
         match len(self.command_history):
-            case length if length != 0: 
+            case length if length != 0:
                 last_command = self.command_history.pop()
                 self.canvas.delete(last_command)
                 self.update_idletasks()
                 #print(f"Revert Count: {self.revert_count}")
                 print(self.command_history)
-            case length if length == 0: 
+            case length if length == 0:
                 #self.revert_count = 0
                 pass
 
-    def set_rectangle(self): 
+    def set_rectangle(self):
         self.rectangle_is_set = True
         self.arrow_is_set = False
-        
+
     def set_arrow(self):
         self.arrow_is_set = True
         self.rectangle_is_set = False
 
     def on_dropdown_select(self, command):
         command()
-

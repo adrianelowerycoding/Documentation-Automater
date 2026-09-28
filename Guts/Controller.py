@@ -19,7 +19,7 @@ class Controller():
         # path to current guide folder
         self.guide_path = Path(guide_path)
 
-        self.sample_rate = 1600
+        self.sample_rate = 16000
         self.chunks = []
         self.stream = None
         self.words = []
@@ -57,9 +57,10 @@ class Controller():
     def pause_recording(self):
         self.accumulated += time.perf_counter() - self.segment_start
         self.is_recording = False
+        # Get the time it paused, store it in pause_time and use that value in sct_save()
 
     def resume_recording(self):
-        self.segment_start - time.perf_counter()
+        self.segment_start = time.perf_counter()
         self.is_recording = True
 
     def stop_recording(self): 
@@ -139,18 +140,20 @@ class Controller():
         # add filepath to the button_history[] list
         self.in_sct_mode = True
 
-        # bump count for this screenshot
+        # increment count per screenshot
         self.sct_counter += 1
         filename = f"sct_{self.sct_counter}.png"
         # full path to save to
         filepath = self.sct_dir / filename
-
         screenshot.save(filepath)
 
         # log timestamp + path
-        self.button_history.append((timestamp, "screenshot", str(filepath)))
+        # Timestamp for every sct is accumulated (the time recording was paused) rounded to 2 decimal places
+        self.button_history.append((self.get_active_timestamp(), "screenshot", self.sct_counter, str(filepath)))
 
-        return filepath
+        print(self.button_history)
+
+        return filepath # why? 
 
     def get_active_timestamp(self): 
         if self.is_recording: 
