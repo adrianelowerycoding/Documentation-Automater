@@ -1,10 +1,17 @@
-
-
 import customtkinter as ctk
 import tkinter as tk
 from PIL import ImageGrab
 import ctypes
+import sys
+from pathlib import Path
 from edit_menu import EditMenu, EditMenuGlassWindow
+
+parent_dir = Path(__file__).resolve().parent.parent
+
+if str(parent_dir) not in sys.path:
+    sys.path.append(str(parent_dir))
+
+from Guts.Controller import Controller
 
 # Load the two Windows DLLs used to detect the real display scale factor
 _user32 = ctypes.windll.user32
@@ -199,12 +206,12 @@ class EditPopUp(ctk.CTkToplevel):
         #     print("Saved screenshot.png")
         self._save_screenshot()
 
-    def on_edit_btn(self): 
+    def on_edit_btn(self):
         # Opens EditMenu and EditMenuGlassWindow
         self._launch_edit_menu()
-       
-        
-        
+
+
+
 
 
 
@@ -314,7 +321,7 @@ class CloseToggleTab(ctk.CTkToplevel):
 
 class CaptureOverlay:
     """Owns all six windows, keeps them stacked correctly, closes them together."""
-    def __init__(self, master, border_color="#FF5733", border_thickness=6):
+    def __init__(self, master, controller, border_color="#FF5733", border_thickness=6):
         self.master = master
         self.border_window = BorderWindow(master, border_color, border_thickness)
         self.selection_box = SelectionBox(master, color="red", thickness=2)
@@ -324,11 +331,17 @@ class CaptureOverlay:
             on_drag=self._on_drag,
             on_release=self._on_release,
         )
+
         self.pop_up = EditPopUp(
-            master, 
-            launch_edit_menu=self._launch_edit_menu)
+            master,
+            launch_edit_menu=self._launch_edit_menu,
+            save_screenshot=self._save_screenshot)
+
         self.dpi_scale = get_dpi_scale()  # scale factor to fix screenshot cropping (see get_dpi_scale)
-        
+
+        # same controller all the way from HomePage, not a new one. gets passed to EditMenu
+        # too down in _launch_edit_menu, so both Save buttons hit the same sct_save()
+        self.controller = controller
 
         self.screenshot = None
 
@@ -400,6 +413,8 @@ class CaptureOverlay:
         self.selection_box.show_at(self.start_x, self.start_y, x_root, y_root)
 
     def _on_release(self, x_root, y_root):
+        """Draws a rectangle on screen and ImageGrabs the rectangle's body and
+        saves it to self.screenshot"""
         x1, x2 = sorted((self.start_x, x_root))
         y1, y2 = sorted((self.start_y, y_root))
 
@@ -415,9 +430,9 @@ class CaptureOverlay:
             s = self.dpi_scale
             bbox = (int(x1 * s), int(y1 * s), int(x2 * s), int(y2 * s))
             self.screenshot = ImageGrab.grab(bbox=bbox)
-            # sends image to popup; "save" happens when save button is pressed; 
+            # sends image to popup; "save" happens when save button is pressed;
             # passes screenshot to edit menu canvas when "edit" button is pressed
-            # self.pop_up.set_screenshot(self.screenshot) 
+            # self.pop_up.set_screenshot(self.screenshot)
             self.selection_box.show_at(x1, y1, x2, y2)
 
             # Only now — after a real selection was captured on release —
@@ -427,12 +442,15 @@ class CaptureOverlay:
         else:
             self.selection_box.hide()
 
-    def _save_screenshot(self): 
-        if self.screenshot is not None:
-            self.screenshot.save("screenshot.png")
-            print("Saved screenshot.png")
+    def _save_screenshot(self):
+      # send screenshot data to Controller's sct_save()
+      self.controller.sct_save(self.screenshot)
 
-    def _launch_edit_menu(self): 
+        # if self.screenshot is not None:
+        #     self.screenshot.save("screenshot.png")
+        #     print("Saved screenshot.png")
+
+    def _launch_edit_menu(self):
         # Makes everything invisible except for border_window
         self._pause_stacking()
         self.glass_window.withdraw()
@@ -445,11 +463,15 @@ class CaptureOverlay:
         self.edit_glass = EditMenuGlassWindow(self.master)
         self.edit_glass.lift(self.border_window)
 
-        self.edit_menu = EditMenu(self.master, self.screenshot, self._close_edit_menu_and_glass)
+        self.edit_menu = EditMenu(
+            self.master,
+            self.screenshot,
+            self._close_edit_menu_and_glass,
+            controller=self.controller) # Pass Controller instance to EditMenu so the same instance is shared
         self.edit_menu.attributes("-topmost", True)
         self.edit_menu.focus_force()
 
-    def _close_edit_menu_and_glass(self): 
+    def _close_edit_menu_and_glass(self):
         """Closes EditMenu and EditMenuGlass and undos withdraw for the stack"""
         self.edit_glass.destroy()
         self.edit_menu.destroy()
@@ -462,7 +484,7 @@ class CaptureOverlay:
 
 
 
-    
+
 
     def close(self, event=None):
         if self._stack_job is not None:

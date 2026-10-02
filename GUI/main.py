@@ -9,7 +9,7 @@ from profile_pages import ProfileSettingsPage, AddProfilePage, EditProfilePage
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        # -- App root window -- 
+        # -- App root window --
         # Set theme and appearance of root window
         ctk.set_appearance_mode("system")
         ctk.set_default_color_theme("blue")
@@ -26,23 +26,28 @@ class App(ctk.CTk):
 
         # The root window has 2 frames/containers: sidebar and content
 
-        # -- Content area -- contains ALL pages
+        # -- Content area -- holds the header on top and ALL pages below it
         self.content = ctk.CTkFrame(self)
         self.content.grid(row=0, column=1, sticky="nsew")
-        # Configures each page frame to stretch to fill container
-        self.content.grid_rowconfigure(0, weight=1)
+        # Row 0 is the header (stays its own size), row 1 is the pages (stretches to fill the rest)
+        self.content.grid_rowconfigure(0, weight=0)
+        self.content.grid_rowconfigure(1, weight=1)
         self.content.grid_columnconfigure(0, weight=1)
+
+        # -- Header -- its own row above the pages so the toggle button never sits on top of them
+        self.header = ctk.CTkFrame(self.content, height=50, corner_radius=0, fg_color="transparent")
+        self.header.grid(row=0, column=0, sticky="ew")
 
         # Persistent Toggle Button (Stays visible in the main view)
         self.toggle_btn = ctk.CTkButton(
-            self.content, 
-            text="☰", 
-            width=40, 
-            height=40, 
+            self.header,
+            text="☰",
+            width=40,
+            height=40,
             command=self.toggle_sidebar,
             font=("Arial", 18)
         )
-        self.toggle_btn.grid(row = 0, column = 0, sticky="nw", pady=10, padx=10, )
+        self.toggle_btn.grid(row=0, column=0, sticky="w", pady=5, padx=10)
 
         # -- Sidebar Frame
         if ctk.get_appearance_mode() == "Dark":
@@ -52,42 +57,42 @@ class App(ctk.CTk):
             self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0, fg_color = constants.LIGHT_FG_COLOR)
             self.sidebar.grid_propagate(False)
 
-        # -- Sidebar content 
-        self.recording_label = ctk.CTkLabel(self.sidebar, 
+        # -- Sidebar content
+        self.recording_label = ctk.CTkLabel(self.sidebar,
             text="Recording",
             font=ctk.CTkFont(family="Arial", size=12, weight="bold", underline=True))
-        self.recording_label.pack(pady=0, padx=(15,0), anchor="w") 
+        self.recording_label.pack(pady=0, padx=(15,0), anchor="w")
 
         self.make_sidebar_button("Home", lambda: self.show_page(HomePage))
 
-        self.recording_label = ctk.CTkLabel(self.sidebar, 
+        self.recording_label = ctk.CTkLabel(self.sidebar,
             text="Settings",
             font=ctk.CTkFont(family="Arial", size=12, weight="bold", underline=True))
-        self.recording_label.pack(pady=0, padx=(15,0), anchor="w") 
+        self.recording_label.pack(pady=0, padx=(15,0), anchor="w")
 
         self.make_sidebar_button("Instructions", lambda: self.show_page(InstructionsPage))
         self.make_sidebar_button("Default Keybinds", lambda: self.show_page(DefaultKeybindsPage))
         self.make_sidebar_button("Profile Settings", lambda: self.show_page(ProfileSettingsPage))
-       
-        # Building a dictionary of page instances 
-        self.pages= {} 
-        for PageClass in (HomePage, InstructionsPage, DefaultKeybindsPage, 
+
+        # Building a dictionary of page instances
+        self.pages= {}
+        for PageClass in (HomePage, InstructionsPage, DefaultKeybindsPage,
                           ProfileSettingsPage, AddProfilePage, EditProfilePage):
             # Passes the content from App and a dynamic data variable from App (self)
             page = PageClass(self.content, self) # Creates an instance of the loaded class
             # container frame is sent App -> PageClass -> MakeBasePage and processed -> PageClass
-            page.grid(row=0, column=0, sticky="nsew")
+            # Pages go in row 1, right under the header
+            page.grid(row=1, column=0, sticky="nsew")
             self.pages[PageClass] = page # Stores page instance in dictionary
-            # Instance's key is its class 
+            # Instance's key is its class
 
         self.show_page(HomePage)
-        self.toggle_btn.lift()
 
-    # -- Functions -- 
+    # -- Functions --
 
     def show_page(self, page_class):
+        # No need to lift the toggle button anymore, it's in the header not on top of the pages
         self.pages[page_class].tkraise()
-        self.toggle_btn.lift()
 
     def make_sidebar_button(self, text, command):
         if ctk.get_appearance_mode() == "Dark":
@@ -101,7 +106,7 @@ class App(ctk.CTk):
             )
             sidebar_btn.pack(pady=0, padx=10, fill="x")
             return sidebar_btn
-        else: 
+        else:
             sidebar_btn = ctk.CTkButton(
                 self.sidebar,
                 text=text,
@@ -129,12 +134,3 @@ class App(ctk.CTk):
 if __name__ == "__main__":
     app = App()
     app.mainloop()
-
-
-
-
-
-
-
-
-

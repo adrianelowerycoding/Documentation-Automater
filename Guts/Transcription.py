@@ -1,38 +1,27 @@
 """
+This module simply takes the audio sample from Controller, transcribes it, then 
+passes the words[] list to Controller.
 """
-import threading
-import numpy as np
-import sounddevice as sd
 from faster_whisper import WhisperModel
 
-sample_rate = 16000
-chunks = []
-words = []
+class Transcription(): 
+    def __init__(self): 
+        self.words = []
+
+    def transcribe(self, audio): 
+        model = WhisperModel("small.en", device="cpu", compute_type="int8")
+        print("Model loaded")
+
+        segments, info = model.transcribe(audio, word_timestamps=True)
+
+        for segment in segments: 
+            for word in segment.words: 
+                self.words.append((word.start, "word", word.word))
+
+        return self.words
 
 
-def on_audio(indata, frames, time_info, status):
-    chunks.append(indata.copy())
 
-def start_recording(): 
-    stream.start()
-
-def stop_recording(): 
-    print("Recording stopped")
-    stream.stop()
-    stream.close()
-
-stream = sd.InputStream(samplerate=sample_rate, channels=1, dtype=np.float32, callback=on_audio)
-
-# Create list of audio sample
-audio = np.concatenate(chunks).squeeze()
-
-model = WhisperModel("small.en", device="cpu", compute_type="int8")
-segments, info = model.transcribe(audio, word_timestamps=True)
-
-for segment in segments:
-    for word in segment.words:
-        words.append((word.start, "word", word.word)) # Create a list of tuples; (timestamp, word)
-       # print(f"{word.start} | {word.word}")
 
 
 
