@@ -42,7 +42,8 @@ class Controller():
         # counts each screenshot saved
         self.sct_counter = 0
 
-        self.transcription = Transcription()
+        self.transcription = None
+        self.document_creation = None
 
 
     def start_recording(self): 
@@ -77,9 +78,30 @@ class Controller():
             return
 
         audio = np.concatenate(self.chunks).squeeze()
-        self.words = self.transcription.transcribe(audio) # Send audio to transcribe()
-        # Send both lists to be merged and put into documents
-        DocumentCreation(self.words, self.button_history)
+
+        # Creating these objects right before I have to use 
+        # them so model loading won't bog down program
+        # when user hits record
+
+        if self.transcription is None: 
+            self.transcription = Transcription()
+            self.words = self.transcription.transcribe(audio) # Send audio to be transcribed
+        if self.document_creation is None: 
+            # Send both lists to be merged and put into documents
+            self.document_creation = DocumentCreation(self.words, self.button_history)
+
+    def save_session(self): 
+        if not self.is_recording: 
+            self.document_creation.write_docx()
+
+    def clear_session(self):
+        if not self.is_recording: 
+            self.words.clear
+            self.button_history.clear
+            # Clear the screenshots folder also
+
+
+        
 
     def on_audio(self, indata, frames, time_info, status): 
         if self.is_recording: 
@@ -92,47 +114,47 @@ class Controller():
 
         # If there was a pgh before this heading block then you insert a "end" element in list 
         # and then insert a "heading_on" element in list right after. 
-        if self.is_recording and not self.heading_on:
+        if not self.heading_on:
             self.block_end()
             self.button_history.append((self.get_active_timestamp(), "heading", heading_value))
             self.heading_on = True
             print(self.button_history)
 
-        elif self.is_recording: 
+        elif self.heading_on:
             self.block_end()
             self.heading_on = False
             print(self.button_history)
 
     def on_italic(self):
-        if self.is_recording and not self.italic_on:
+        if not self.italic_on:
             self.button_history.append((self.get_active_timestamp(), "italic_on", None))
             self.italic_on = True
             print(self.button_history)
 
-        elif self.is_recording:
+        elif self.italic_on:
             self.button_history.append((self.get_active_timestamp(), "italic_off", None))
             self.italic_on = False
             print(self.button_history)
 
     def on_bullet(self, bullet_style): 
-        if self.is_recording and not self.bullet_on:
+        if not self.bullet_on:
             self.block_end()
             self.button_history.append((self.get_active_timestamp(), "bullet", bullet_style))
             self.bullet_on = True
             print(self.button_history)
         
-        elif self.is_recording:
+        elif self.bullet_on:
             self.block_end()
             self.italic_on = False
             print(self.button_history)
 
     def on_arrow(self): 
-        if self.is_recording and not self.arrow_on:
+        if not self.arrow_on:
             self.button_history.append((self.get_active_timestamp(), "arrow_segment_on", None))
             self.arrow_on = True
             print(self.button_history)
 
-        elif self.is_recording: 
+        elif self.arrow_on: 
             self.button_history.append((self.get_active_timestamp(), "arrow_segment_off", None))
             self.arrow_on = False
             print(self.button_history)

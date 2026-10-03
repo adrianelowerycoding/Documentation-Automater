@@ -1,16 +1,17 @@
 from dataclasses import dataclass, field
 from docx import Document
+from pathlib import Path
+from typing import Any
 
 @dataclass
 class Run: 
     text: str
-    bold: bool = False
     italic: bool = False
 
 @dataclass
 class Block: 
     kind: str = "paragraph"
-    level: int = 1
+    value: Any = None
     # Produces a new list for each Block
     runs: list = field(default_factory=list)
 
@@ -22,12 +23,13 @@ class DocumentCreation():
         self.words = words
         self.button_history = button_history
         self.events = sorted(self.words + self.button_history)
+        self.path = Path.cwd()
 
 
     def build_blocks(self):
-        blocks = []
-        current = Block()
-        italic = False
+        self.blocks = []
+        self.current = Block()
+        self.italic = False
 
         for event in self.events: 
             match event: 
@@ -35,23 +37,70 @@ class DocumentCreation():
                 #heading, italic, bullet, arrow
                 case (timestamp, kind, value): 
                     if kind == "word": 
-                            pass
+                        last = self.current.runs[-1] if self.current.runs else None
+                        if last and last.italic == self.italic: 
+                            last.text += " " + value
+                        else:
+                            text = (" " if self.current.runs else "") + value # no leading space on first word
+                            self.current.runs.append(Run(text,italic=self.italic))
+                        
                     elif kind == "heading": 
-                        current.kind = "heading"
-                        current.level = value
+                        self.current.kind = "heading"
+                        self.current.value = value
+
                     elif kind == "italic_on":
-                        italic = True
+                        self.italic = True
+
                     elif kind == "italic_off":
-                        italic = False
+                        self.italic = False
+
                     elif kind == "bullet":
-                        pass
+                        self.current.kind = "bullet"
+                        self.current.value = value
+
                     elif kind == "arrow":
                         pass
+
+                    elif kind == "block_end":
+                        self.blocks.append(self.current)
+                        self.current = Block()
                     
                 #Matches tuple with 4 items: 
                 #screenshot
-                case (timestamp, sct_counter, screenshot, filepath):
-                    pass
+                case (timestamp, sct_counter, kind, filepath):
+                    if kind == "screenshot":
+                        # flush any in-progress text before creating 
+                        # block for screenshot
+                        if self.current.runs:
+                            self.blocks.append(self.current)
+                            self.current = Block()
+                        self.blocks.append(Block(kind="screenshot", value=filepath))
+        # grabs the last block too in case there's no trailing "end"
+        if self.current.runs:
+            self.blocks.append(self.current)
+
+    def write_docx(self):
+        self.build_blocks()
+        doc = Document()
+
+        for block in self.blocks:
+            if block.kind == "heading":
+                paragraph = doc.add_heading("", level=block.value)
+            elif block.kind == "bullet":
+                paragraph = doc.add_paragraph(style="List Bullet")
+            elif block.kind == "screenshot":
+                doc.add_picture(block.value) # value is filepath
+                continue
+            else:
+                # Just adds words; word pgh is non stop until a heading, bullet, or sct is inserted
+                paragraph = doc.add_paragraph()
+
+            for run in block.runs:
+                word_run = paragraph.add_run(run.text)
+                word_run.italic = run.italic
+
+        doc.save(f"{self.path}/test.docx")
+
 
 
             

@@ -224,14 +224,19 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
 
     def on_click_pause(self):
         self.set_state(RecordingState.PAUSED)
+        self.controller.pause_recording()
+        
 
     def on_click_stop(self):
         # Stops the recording and destroys main_side_menu
         self.set_state(RecordingState.STOPPED)
         self.main_side_menu.destroy()
+        self.controller.stop_recording()
 
     def on_click_save(self):
         self.set_state(RecordingState.SAVED)
+        self.controller.save_session()
 
     def on_click_clear(self):
         self.set_state(RecordingState.CLEARED)
+        self.controller.clear_session()
