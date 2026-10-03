@@ -11,6 +11,7 @@ import time
 #     sys.path.append(str(parent_dir))
 
 from Guts.Transcription import Transcription
+from Guts.Document_Creation import DocumentCreation
 
 class Controller(): 
     def __init__(self, guide_path): 
@@ -41,7 +42,7 @@ class Controller():
         # counts each screenshot saved
         self.sct_counter = 0
 
-        self.transcribe = Transcription()
+        self.transcription = Transcription()
 
 
     def start_recording(self): 
@@ -76,7 +77,9 @@ class Controller():
             return
 
         audio = np.concatenate(self.chunks).squeeze()
-        self.transcribe(audio) # Send audio to transcribe()
+        self.words = self.transcription.transcribe(audio) # Send audio to transcribe()
+        # Send both lists to be merged and put into documents
+        DocumentCreation(self.words, self.button_history)
 
     def on_audio(self, indata, frames, time_info, status): 
         if self.is_recording: 
@@ -115,7 +118,7 @@ class Controller():
         if self.is_recording and not self.bullet_on:
             self.block_end()
             self.button_history.append((self.get_active_timestamp(), "bullet", bullet_style))
-            self.italic_on = True
+            self.bullet_on = True
             print(self.button_history)
         
         elif self.is_recording:
@@ -149,7 +152,7 @@ class Controller():
 
         # log timestamp + path
         # Timestamp for every sct is accumulated (the time recording was paused) rounded to 2 decimal places
-        self.button_history.append((self.get_active_timestamp(), "screenshot", self.sct_counter, str(filepath)))
+        self.button_history.append((self.get_active_timestamp(), self.sct_counter, "screenshot", str(filepath)))
 
         print(self.button_history)
 
