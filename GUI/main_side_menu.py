@@ -303,6 +303,8 @@ class MainSideMenu(ctk.CTkToplevel):
         # would.
         self.toggle_collapse()
         if self.screenshot_window is None or not self.screenshot_window.winfo_exists():
+            
+            self.controller.pause_recording()  # pause the recording while the screenshot overlay is up
             # just passing the same controller one level further down
             self.screenshot_window = CaptureOverlay(self, controller=self.controller)
         else:

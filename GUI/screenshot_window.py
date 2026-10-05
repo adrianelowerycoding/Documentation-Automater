@@ -481,11 +481,6 @@ class CaptureOverlay:
         self.close_toggle.deiconify()
         self._resume_stacking()
 
-
-
-
-
-
     def close(self, event=None):
         if self._stack_job is not None:
             self.border_window.after_cancel(self._stack_job)
@@ -496,3 +491,6 @@ class CaptureOverlay:
         self.selection_box.destroy()
         self.glass_window.destroy()
         self.border_window.destroy()
+
+        # resume recording since you're done taking screenshots
+        self.controller.resume_recording()

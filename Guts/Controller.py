@@ -57,9 +57,12 @@ class Controller():
         print("Recording...")
 
     def pause_recording(self):
-        self.accumulated += time.perf_counter() - self.segment_start
-        self.is_recording = False
-        # Get the time it paused, store it in pause_time and use that value in sct_save()
+        if self.is_recording: 
+            self.accumulated += time.perf_counter() - self.segment_start
+            self.is_recording = False
+            # Get the time it paused, store it in pause_time and use that value in sct_save()
+        else:
+            self.resume_recording() # If the user hits pause again, it will resume recording
 
     def resume_recording(self):
         self.segment_start = time.perf_counter()
@@ -77,21 +80,23 @@ class Controller():
             print("No audio recorded")
             return
 
-        audio = np.concatenate(self.chunks).squeeze()
 
-        # Creating these objects right before I have to use 
-        # them so model loading won't bog down program
-        # when user hits record
-
-        if self.transcription is None: 
-            self.transcription = Transcription()
-            self.words = self.transcription.transcribe(audio) # Send audio to be transcribed
-        if self.document_creation is None: 
-            # Send both lists to be merged and put into documents
-            self.document_creation = DocumentCreation(self.words, self.button_history)
 
     def save_session(self): 
         if not self.is_recording: 
+            audio = np.concatenate(self.chunks).squeeze()
+
+            # Creating these objects right before I have to use 
+            # them so model loading won't bog down program
+            # when user hits record
+
+            if self.transcription is None: 
+                self.transcription = Transcription()
+                self.words = self.transcription.transcribe(audio) # Send audio to be transcribed
+            if self.document_creation is None: 
+                # Send both lists to be merged and put into documents
+                self.document_creation = DocumentCreation(self.words, self.button_history)
+
             self.document_creation.write_docx()
 
     def clear_session(self):

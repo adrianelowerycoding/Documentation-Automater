@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from docx import Document
+from docx.shared import Inches
 from pathlib import Path
 from typing import Any
 
@@ -89,7 +90,7 @@ class DocumentCreation():
             elif block.kind == "bullet":
                 paragraph = doc.add_paragraph(style="List Bullet")
             elif block.kind == "screenshot":
-                doc.add_picture(block.value) # value is filepath
+                doc.add_picture(block.value, width=Inches(6)) # value is filepath
                 continue
             else:
                 # Just adds words; word pgh is non stop until a heading, bullet, or sct is inserted
