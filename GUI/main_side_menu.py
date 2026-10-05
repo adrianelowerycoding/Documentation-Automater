@@ -277,11 +277,11 @@ class MainSideMenu(ctk.CTkToplevel):
 
     def on_bullet_1(self):
         print("Bullet 1 clicked")
-        self.controller.on_bullet("unordered")
+        self.controller.on_bullet("List Bullet")
 
     def on_bullet_2(self):
         print("Bullet 2 clicked")
-        self.controller.on_bullet("numbered")
+        self.controller.on_bullet("List Number")
 
     def on_italics(self):
         print("italics clicked")

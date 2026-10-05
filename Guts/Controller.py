@@ -154,16 +154,11 @@ class Controller():
             print(self.button_history)
 
     def on_arrow(self): 
-        if not self.arrow_on:
-            self.button_history.append((self.get_active_timestamp(), "arrow_segment_on", None))
-            self.arrow_on = True
-            print(self.button_history)
-
-        elif self.arrow_on: 
-            self.button_history.append((self.get_active_timestamp(), "arrow_segment_off", None))
-            self.arrow_on = False
-            print(self.button_history)
-
+        # whenever arrow button is clicked an arrow is injected into the button_history[]
+        # list. 
+        self.button_history.append((self.get_active_timestamp(), "arrow", "→"))
+        print(self.button_history)
+        # (ts, 'word', "word")
 
     def sct_save(self, screenshot): 
         # receive the ImageGrab data and save the photo 
@@ -182,8 +177,6 @@ class Controller():
         self.button_history.append((self.get_active_timestamp(), self.sct_counter, "screenshot", str(filepath)))
 
         print(self.button_history)
-
-        return filepath # why? 
 
     def get_active_timestamp(self): 
         if self.is_recording: 

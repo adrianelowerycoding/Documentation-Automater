@@ -37,15 +37,15 @@ class DocumentCreation():
                 #Matches tuple with 3 items: 
                 #heading, italic, bullet, arrow
                 case (timestamp, kind, value): 
-                    if kind == "word": 
+                    if kind == "word" or kind == "arrow": #evaluating both "word" and "arrow" type
                         last = self.current.runs[-1] if self.current.runs else None
                         if last and last.italic == self.italic: 
                             last.text += " " + value
                         else:
                             text = (" " if self.current.runs else "") + value # no leading space on first word
                             self.current.runs.append(Run(text,italic=self.italic))
-                        
-                    elif kind == "heading": 
+
+                    elif kind == "heading":
                         self.current.kind = "heading"
                         self.current.value = value
 
@@ -57,10 +57,7 @@ class DocumentCreation():
 
                     elif kind == "bullet":
                         self.current.kind = "bullet"
-                        self.current.value = value
-
-                    elif kind == "arrow":
-                        pass
+                        self.current.value = value # List Bullet or List Number
 
                     elif kind == "block_end":
                         self.blocks.append(self.current)
@@ -91,7 +88,7 @@ class DocumentCreation():
             if block.kind == "heading":
                 paragraph = doc.add_heading("", level=block.value)
             elif block.kind == "bullet":
-                paragraph = doc.add_paragraph(style="List Bullet")
+                paragraph = doc.add_paragraph(style=block.value)
             elif block.kind == "screenshot":
                 pic = doc.add_picture(block.value, width=MAX_W) # value is filepath
                 # If height is greater than MAX_H then the height is reduced
