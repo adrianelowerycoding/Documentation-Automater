@@ -81,6 +81,9 @@ class DocumentCreation():
             self.blocks.append(self.current)
 
     def write_docx(self):
+        MAX_W = Inches(6)
+        MAX_H = Inches(8)
+
         self.build_blocks()
         doc = Document()
 
@@ -90,8 +93,13 @@ class DocumentCreation():
             elif block.kind == "bullet":
                 paragraph = doc.add_paragraph(style="List Bullet")
             elif block.kind == "screenshot":
-                doc.add_picture(block.value, width=Inches(6)) # value is filepath
-                continue
+                pic = doc.add_picture(block.value, width=MAX_W) # value is filepath
+                # If height is greater than MAX_H then the height is reduced
+                # to the max height and the width is shrinked to match
+                if pic.height > MAX_H:
+                    ratio = MAX_H / pic.height
+                    pic.height = MAX_H
+                    pic.width = int(pic.width * ratio)
             else:
                 # Just adds words; word pgh is non stop until a heading, bullet, or sct is inserted
                 paragraph = doc.add_paragraph()
