@@ -1,0 +1,184 @@
+import sys
+from pathlib import Path
+import os
+import numpy as np
+import sounddevice as sd
+import time
+
+# parent_dir = Path(__file__).resolve().parent.parent
+
+# if str(parent_dir) not in sys.path:
+#     sys.path.append(str(parent_dir))
+
+from Guts.Transcription import Transcription
+from Guts.Document_Creation import DocumentCreation
+
+class Controller(): 
+    def __init__(self, guide_path): 
+        super().__init__()
+
+        # path to current guide folder
+        self.guide_path = Path(guide_path)
+
+        self.sample_rate = 16000
+        self.chunks = []
+        self.stream = None
+        self.words = []
+        self.button_history = []
+        self.clock_start = None
+        self.accumulated = 0.0
+        self.segment_start = None
+        self.is_recording = False
+        self.heading_on = False
+        self.arrow_on = False
+        self.italic_on = False
+        self.bullet_on = False
+        self.in_sct_mode = False
+
+        # screenshots folder for this guide
+        self.sct_dir = self.guide_path / "screenshots"
+        # make the folder if it's not there yet
+        self.sct_dir.mkdir(parents=True, exist_ok=True)
+        # counts each screenshot saved
+        self.sct_counter = 0
+
+        self.transcription = None
+        self.document_creation = None
+
+
+    def start_recording(self): 
+        # Creating stream
+        self.stream = sd.InputStream(samplerate=self.sample_rate, channels=1, dtype=np.float32, callback=self.on_audio)
+        
+        self.clock_start = time.perf_counter()
+        self.segment_start = self.clock_start
+        self.is_recording = True
+        self.stream.start()
+        print("Recording...")
+
+    def pause_recording(self):
+        if self.is_recording: 
+            self.accumulated += time.perf_counter() - self.segment_start
+            self.is_recording = False
+            # Get the time it paused, store it in pause_time and use that value in sct_save()
+        else:
+            self.resume_recording() # If the user hits pause again, it will resume recording
+
+    def resume_recording(self):
+        self.segment_start = time.perf_counter()
+        self.is_recording = True
+
+    def stop_recording(self): 
+        self.is_recording = False
+        if self.stream is not None:
+            self.stream.stop()
+            self.stream.close()
+            self.stream = None
+            print("Recording stopped")
+
+        if not self.chunks:
+            print("No audio recorded")
+            return
+
+
+
+    def save_session(self): 
+        if not self.is_recording: 
+            audio = np.concatenate(self.chunks).squeeze()
+
+            # Creating these objects right before I have to use 
+            # them so model loading won't bog down program
+            # when user hits record
+
+            if self.transcription is None: 
+                self.transcription = Transcription()
+                self.words = self.transcription.transcribe(audio) # Send audio to be transcribed
+            if self.document_creation is None: 
+                # Send both lists to be merged and put into documents
+                self.document_creation = DocumentCreation(self.words, self.button_history)
+
+            self.document_creation.write_docx()
+
+    def clear_session(self):
+        if not self.is_recording: 
+            self.words.clear
+            self.button_history.clear
+            # Clear the screenshots folder also
+
+
+        
+
+    def on_audio(self, indata, frames, time_info, status): 
+        if self.is_recording: 
+            self.chunks.append(indata.copy())
+
+    def block_end(self): 
+        self.button_history.append((self.get_active_timestamp(), "block_end", None))
+
+    def on_heading(self, heading_value): 
+
+        # If there was a pgh before this heading block then you insert a "end" element in list 
+        # and then insert a "heading_on" element in list right after. 
+        if not self.heading_on:
+            self.block_end()
+            self.button_history.append((self.get_active_timestamp(), "heading", heading_value))
+            self.heading_on = True
+            print(self.button_history)
+
+        elif self.heading_on:
+            self.block_end()
+            self.heading_on = False
+            print(self.button_history)
+
+    def on_italic(self):
+        if not self.italic_on:
+            self.button_history.append((self.get_active_timestamp(), "italic_on", None))
+            self.italic_on = True
+            print(self.button_history)
+
+        elif self.italic_on:
+            self.button_history.append((self.get_active_timestamp(), "italic_off", None))
+            self.italic_on = False
+            print(self.button_history)
+
+    def on_bullet(self, bullet_style): 
+        if not self.bullet_on:
+            self.block_end()
+            self.button_history.append((self.get_active_timestamp(), "bullet", bullet_style))
+            self.bullet_on = True
+            print(self.button_history)
+        
+        elif self.bullet_on:
+            self.block_end()
+            self.italic_on = False
+            print(self.button_history)
+
+    def on_arrow(self): 
+        # whenever arrow button is clicked an arrow is injected into the button_history[]
+        # list. 
+        self.button_history.append((self.get_active_timestamp(), "arrow", "→"))
+        print(self.button_history)
+        # (ts, 'word', "word")
+
+    def sct_save(self, screenshot): 
+        # receive the ImageGrab data and save the photo 
+        # add filepath to the button_history[] list
+        self.in_sct_mode = True
+
+        # increment count per screenshot
+        self.sct_counter += 1
+        filename = f"sct_{self.sct_counter}.png"
+        # full path to save to
+        filepath = self.sct_dir / filename
+        screenshot.save(filepath)
+
+        # log timestamp + path
+        # Timestamp for every sct is accumulated (the time recording was paused) rounded to 2 decimal places
+        self.button_history.append((self.get_active_timestamp(), self.sct_counter, "screenshot", str(filepath)))
+
+        print(self.button_history)
+
+    def get_active_timestamp(self): 
+        if self.is_recording: 
+            return round(self.accumulated + (time.perf_counter() - self.segment_start), 2)
+        return round(self.accumulated, 2)
