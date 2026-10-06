@@ -70,6 +70,7 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
         self.new_guide_window = None # Tracking toplevel for on_click_new_guide
         self.current_guide_path = None # Folder of the guide the user just made
         self.controller = None # the ONE Controller for the current recording session - built in on_click_record
+        self.is_paused = False # tracking if the user has paused the recording. If they click record while paused, it resumes recording
         # -- Prepping Page --
         ## -- Layout: top bar, top spacer, title, output, recording, save/clear, bottom spacer, status bar --
         self.columnconfigure(0, weight=1) # only 1 column, this keeps everything centered in the window
@@ -210,19 +211,27 @@ class HomePage(MakeBasePage): # Homepage Extends MakeBasePage
             self.record_btn.configure(state="normal")
 
     def on_click_record(self):
-        # Sets state to recording and opens main_side_menu
-        self.set_state(RecordingState.RECORDING)
-        # If main_side_menu isn't open, open it and lift it
-        if self.main_side_menu is None or not self.main_side_menu.winfo_exists():
-            # only making ONE Controller now, right here. gets passed down to MainSideMenu,
-            # then to CaptureOverlay/EditMenu - nothing else builds its own anymore
-            self.controller = Controller(self.current_guide_path)
-            self.main_side_menu = MainSideMenu(self, controller=self.controller)
-            self.controller.start_recording()
-        else:
-            self.main_side_menu.lift()
+        if not self.is_paused:
+            # Sets state to recording and opens main_side_menu
+            self.set_state(RecordingState.RECORDING)
+            # If main_side_menu isn't open, open it and lift it
+            if self.main_side_menu is None or not self.main_side_menu.winfo_exists():
+                # only making ONE Controller now, right here. gets passed down to MainSideMenu,
+                # then to CaptureOverlay/EditMenu - nothing else builds its own anymore
+                self.controller = Controller(self.current_guide_path)
+                self.main_side_menu = MainSideMenu(self, controller=self.controller)
+                self.controller.start_recording()
+            else:
+                self.main_side_menu.lift()
+        else: 
+            # If the user clicks record while paused, it resumes recording
+            self.set_state(RecordingState.RECORDING)
+            self.controller.resume_recording()
+            self.is_paused = False
 
     def on_click_pause(self):
+        #everytime you click pause, it pauses EVERY time. It never resumes. Use on_click_record to resume recording. 
+        self.is_paused = True
         self.set_state(RecordingState.PAUSED)
         self.controller.pause_recording()
         

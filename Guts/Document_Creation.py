@@ -17,14 +17,14 @@ class Block:
     runs: list = field(default_factory=list)
 
 class DocumentCreation(): 
-    def __init__(self, words, button_history): 
+    def __init__(self, words, button_history, guide_path): 
         super().__init__()
 
         # pass words and button_history
         self.words = words
         self.button_history = button_history
         self.events = sorted(self.words + self.button_history)
-        self.path = Path.cwd()
+        self.guide_path = Path(guide_path)
 
 
     def build_blocks(self):
@@ -105,7 +105,7 @@ class DocumentCreation():
                 word_run = paragraph.add_run(run.text)
                 word_run.italic = run.italic
 
-        doc.save(f"{self.path}/test.docx")
+        doc.save(f"{self.guide_path}\\{self.guide_path.name}.docx")
 
 
 

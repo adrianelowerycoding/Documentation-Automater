@@ -95,7 +95,7 @@ class NewGuideWindow(ctk.CTkToplevel):
     # The New Guide menu. on_create gets called with the new Guide folder's path
     def __init__(self, parent, on_create=None):
         super().__init__(parent)
-        self.on_create = on_create
+        self.on_create = on_create # passed HomePage's on_guide_created()
         self.root_folder = get_root_folder()
         self.root_prompt = None
 
@@ -242,6 +242,7 @@ class NewGuideWindow(ctk.CTkToplevel):
             return
 
         # Let the home page know where the new guide is, then close
+        # Triggers homepage's on_guide_created() which creates a new GuideWindow and passes the guide_folder path to it
         if self.on_create:
-            self.on_create(guide_folder)
+            self.on_create(guide_folder) # root folder / project / guide_name
         self.destroy()
