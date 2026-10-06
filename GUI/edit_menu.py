@@ -25,12 +25,35 @@ This version combines:
     the image's actual on-screen footprint, borders excluded, with no need
     to stretch/distort the image to fill the canvas.
 
+  - DPI FIX (read this if you're wondering why img.width isn't just used
+    directly as a window size anymore): screenshot_window.py runs the whole
+    app DPI-unaware, which makes Tkinter think the monitor is smaller than
+    it really is. Tkinter's own numbers (geometry(), winfo_rootx(), canvas
+    coordinates) all live in that shrunk-down "logical pixel" space. The
+    `img` this class receives, though, was captured with ImageGrab in REAL
+    "physical pixels" (screenshot_window.py multiplies by the monitor's
+    scale factor before grabbing, specifically so the screenshot comes out
+    full quality). Those are two different units that happen to be equal
+    numbers ONLY when the display is at 100% scaling. This file now takes
+    a `dpi_scale` argument so it can convert between the two: physical
+    pixels for anything related to the actual captured image data, logical
+    pixels for anything related to Tkinter's own window/canvas sizing.
+
 """
 
 import customtkinter as ctk
 import tkinter as tk
 from PIL import Image, ImageTk, ImageDraw, ImageGrab
 from CTkColorPicker import *
+
+# Pillow renamed Image.LANCZOS to Image.Resampling.LANCZOS a few versions
+# back. This just picks whichever name the installed Pillow actually has,
+# so resizing the preview image below doesn't crash on an older/newer
+# Pillow than whatever's on your other machine.
+try:
+    _RESAMPLE = Image.Resampling.LANCZOS
+except AttributeError:
+    _RESAMPLE = Image.LANCZOS
 
 
 class EditMenuGlassWindow(ctk.CTkToplevel):
@@ -136,13 +159,23 @@ class EditMenu(ctk.CTkToplevel):
     TOOLBAR_BUTTON_HEIGHT = 40
     TOOLBAR_BUTTON_COUNT = 5
 
-    def __init__(self, master, img, close_edit_menu_and_glass=None, controller=None):
+    def __init__(self, master, img, close_edit_menu_and_glass=None, controller=None, dpi_scale=1.0):
         super().__init__(master)
 
         # Pass Controller instance from screenshot_window's CaptureOverlay to EditMenu
         self.controller = controller
-        # Get screenshot to pass to canvas from screenshot_window's EditPopUp
+        # Get screenshot to pass to canvas from screenshot_window's EditPopUp.
+        # Keep this around as the full-quality, PHYSICAL-pixel source image —
+        # everything we eventually save should trace back to this, not to
+        # whatever got drawn on screen.
         self.img = img
+        # How many physical pixels there are for every one logical pixel on
+        # this monitor (1.0 at 100% scaling, 1.25 at 125%, etc). Comes from
+        # CaptureOverlay.dpi_scale in screenshot_window.py, which already
+        # did the work of asking Windows for the real number. Defaults to
+        # 1.0 so this class still behaves if someone forgets to pass it in
+        # (just without the fix — same as before on a 100%-scale screen).
+        self.dpi_scale = dpi_scale or 1.0
         self._close_edit_menu_and_glass = close_edit_menu_and_glass
         self.rectangle_is_set = False
         self.arrow_is_set = False
@@ -153,14 +186,34 @@ class EditMenu(ctk.CTkToplevel):
         # DEFAULT_IMAGE_HEIGHT, growing per-axis to fit the image if it's
         # larger on that axis. The toolbar column's width is then added on
         # top, so the toolbar's space is never eaten into by the image.
-        self.image_area_width = max(self.DEFAULT_IMAGE_WIDTH, img.width)
-        self.window_height = max(self.DEFAULT_IMAGE_HEIGHT, img.height)
+        #
+        # DPI FIX: img.width/img.height are PHYSICAL pixels (see the module
+        # docstring above), but window_width/window_height feed straight
+        # into Tkinter's geometry(), which — because this whole process is
+        # DPI-unaware — expects LOGICAL pixels. Using the physical number
+        # where Tkinter wants a logical one effectively asks for a window
+        # that's `dpi_scale` times too big, and since Windows then stretches
+        # an unaware window by `dpi_scale` again when it actually draws it
+        # on a scaled screen, the window ends up roughly `dpi_scale` times
+        # bigger than intended in every direction. On a scaled laptop
+        # display that pushes most of the window off-screen, and all you
+        # ever see (or get to save) is the top-left corner that's left on
+        # screen — exactly the "zoomed in, cropped" bug. Converting back to
+        # logical pixels here, by dividing by dpi_scale, keeps the window
+        # the size it's actually supposed to be.
+        self.img_logical_width = max(1, round(img.width / self.dpi_scale))
+        self.img_logical_height = max(1, round(img.height / self.dpi_scale))
+
+        self.image_area_width = max(self.DEFAULT_IMAGE_WIDTH, self.img_logical_width)
+        self.window_height = max(self.DEFAULT_IMAGE_HEIGHT, self.img_logical_height)
         self.window_width = self.image_area_width + self.TOOLBAR_WIDTH
 
         # Where _draw_image ends up placing the image's top-left corner,
         # relative to the canvas -- set for real in _draw_image(). Needed
         # later so a "capture the image" action can build a bbox around
-        # just the image, not the whole (possibly larger) canvas.
+        # just the image, not the whole (possibly larger) canvas. This is
+        # in the same logical-pixel space as everything else Tkinter works
+        # with here.
         self.image_x = 0
         self.image_y = 0
 
@@ -210,6 +263,9 @@ class EditMenu(ctk.CTkToplevel):
     # -- Window and Toolbar creation methods --
     def _center_on_screen(self):
         # Screen size in pixels, independent of this window's own size.
+        # winfo_screenwidth/height() also report the LOGICAL screen size
+        # (same DPI-unaware space window_width/window_height are now in
+        # above), so this comparison stays apples-to-apples.
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
 
@@ -222,14 +278,39 @@ class EditMenu(ctk.CTkToplevel):
         self.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
 
     def _draw_image(self, img):
-        self.tk_image = ImageTk.PhotoImage(img)  # keep a reference or it gets garbage collected
+        # DPI FIX: img is still full-resolution (physical pixels). If we
+        # handed that straight to ImageTk.PhotoImage and drew it onto a
+        # canvas that's sized in logical pixels, the picture would be
+        # `dpi_scale` times bigger than the canvas meant to hold it — same
+        # flavor of bug as the window sizing above, just for the image
+        # itself instead of the whole window.
+        #
+        # The trick: shrink the image down to the LOGICAL size for display
+        # only. Because this window is DPI-unaware, Windows takes whatever
+        # we draw at that logical size and stretches it back up by
+        # dpi_scale when it actually paints the screen — so a logical-size
+        # image ends up looking full-size again once it's on the monitor.
+        # self.img (the original, full-res PIL Image) is left untouched, so
+        # nothing here throws away any quality for the final saved file.
+        if self.dpi_scale != 1:
+            display_img = img.resize(
+                (self.img_logical_width, self.img_logical_height), _RESAMPLE
+            )
+        else:
+            # At 100% scaling physical and logical pixels are the same
+            # number, so there's nothing to convert — skip the resize
+            # entirely rather than pay for a no-op resample.
+            display_img = img
+
+        self.tk_image = ImageTk.PhotoImage(display_img)  # keep a reference or it gets garbage collected
         # Center the image within its own area in case that area ended up
         # bigger than the image (i.e. the image was smaller than the
         # default size on that axis). Remember the offset -- this is the
         # top-left corner of the image's actual footprint on the canvas,
-        # as opposed to the canvas's own (possibly larger) footprint.
-        self.image_x = (self.image_area_width - img.width) // 2
-        self.image_y = (self.window_height - img.height) // 2
+        # as opposed to the canvas's own (possibly larger) footprint. This
+        # is in logical pixels, matching display_img's (logical) size.
+        self.image_x = (self.image_area_width - display_img.width) // 2
+        self.image_y = (self.window_height - display_img.height) // 2
         self.canvas.create_image(self.image_x, self.image_y, anchor="nw", image=self.tk_image)
 
     def _build_toolbar(self):
@@ -359,11 +440,24 @@ class EditMenu(ctk.CTkToplevel):
 
         # ...plus the offset where the image was actually drawn inside it
         # (self.image_x/self.image_y, set in _draw_image) gives the
-        # image's real on-screen top-left corner. Sizing the bbox to the
-        # image's own width/height (not the canvas's) means the grab never
-        # includes the empty margin around a smaller-than-default image.
-        x0 = canvas_root_x + self.image_x
-        y0 = canvas_root_y + self.image_y
+        # image's real on-screen top-left corner. Both of those numbers are
+        # LOGICAL pixels — winfo_rootx/rooty() are Tkinter numbers, and
+        # we're in a DPI-unaware process, so that's the space they live in.
+        #
+        # DPI FIX: ImageGrab.grab() always wants PHYSICAL pixel
+        # coordinates, no matter how the process declared its own DPI
+        # awareness (that's exactly why screenshot_window.py multiplies by
+        # dpi_scale before its own ImageGrab call). Previously this method
+        # added self.img.width/height — a PHYSICAL pixel count — straight
+        # onto a LOGICAL-pixel origin, which mismatched units and produced
+        # a bbox that didn't line up with anything real on screen. The fix
+        # converts the origin up to physical pixels first (multiply by
+        # dpi_scale), then adds the physical width/height on top of that —
+        # now everything going into the bbox is physical pixels, same as
+        # the original capture in screenshot_window.py.
+        s = self.dpi_scale
+        x0 = round((canvas_root_x + self.image_x) * s)
+        y0 = round((canvas_root_y + self.image_y) * s)
         x1 = x0 + self.img.width
         y1 = y0 + self.img.height
 

@@ -34,7 +34,23 @@ def get_dpi_scale():
     """Physical pixels per logical pixel, e.g. 1.25 at 125% scaling.
     DESKTOPHORZRES always reports true physical width; HORZRES follows
     whatever DPI virtualization applies to the calling process — so their
-    ratio is the scale factor, independent of this process's own awareness."""
+    ratio is the scale factor, independent of this process's own awareness.
+
+    EL18 version of what this means: because we called
+    SetProcessDpiAwareness(0) above, this whole app is "DPI unaware."
+    Windows handles that by lying to the app about the screen — it tells
+    Tkinter the monitor is smaller than it really is (the "logical" size),
+    then stretches whatever the app draws back up to the real ("physical")
+    size for display. That's convenient for layout but it means every
+    number Tkinter hands you (geometry(), winfo_rootx(), event.x_root,
+    canvas coordinates — all of it) is in the fake, shrunk-down logical
+    space. Anything that needs REAL screen pixels (like grabbing a
+    screenshot) has to take a logical number and multiply it by this scale
+    factor to get back to physical pixels. Forgetting to do that
+    conversion anywhere in the pipeline is exactly the kind of bug that's
+    invisible at 100% scaling (where logical == physical, so the missing
+    multiply doesn't matter) and very visible at 125%/150%/etc.
+    """
     hdc = _user32.GetDC(None)  # device context for the whole screen
     try:
         return _gdi32.GetDeviceCaps(hdc, DESKTOPHORZRES) / _gdi32.GetDeviceCaps(hdc, HORZRES)  # physical ÷ logical = scale
@@ -321,8 +337,33 @@ class CloseToggleTab(ctk.CTkToplevel):
 
 class CaptureOverlay:
     """Owns all six windows, keeps them stacked correctly, closes them together."""
-    def __init__(self, master, controller, border_color="#FF5733", border_thickness=6):
+    def __init__(self, master, controller, border_color="#FF5733", border_thickness=6, on_closed=None):
         self.master = master
+
+        # --- BUG FIX: dangling-reference bug ---
+        # EL18 version: CaptureOverlay is a plain Python object, NOT a Tk
+        # widget — it has no winfo_exists(), no lift(), none of that. It
+        # just *owns* several real Tk windows as attributes (border_window,
+        # glass_window, etc.) and destroys them all together in close().
+        #
+        # The bug: MainSideMenu.on_camera() used to hang on to this whole
+        # CaptureOverlay object in self.screenshot_window, and when you hit
+        # the red X, close() below destroyed the six Tk windows but never
+        # told MainSideMenu "hey, I'm done, let go of me." So
+        # self.screenshot_window kept pointing at a CaptureOverlay whose
+        # windows were all gone. Next camera click, MainSideMenu tried to
+        # call .winfo_exists() on that stale object to check if it was
+        # still open — and since CaptureOverlay never had that method to
+        # begin with, that threw an AttributeError and silently killed the
+        # click before a new overlay could ever get created.
+        #
+        # The fix: take an optional on_closed callback and fire it at the
+        # end of close(). MainSideMenu passes in a tiny function that just
+        # sets self.screenshot_window back to None, so next time the
+        # simple "is None?" check in on_camera is both correct AND enough —
+        # no more guessing via a method that was never there.
+        self.on_closed = on_closed
+
         self.border_window = BorderWindow(master, border_color, border_thickness)
         self.selection_box = SelectionBox(master, color="red", thickness=2)
         self.glass_window = GlassWindow(
@@ -467,7 +508,27 @@ class CaptureOverlay:
             self.master,
             self.screenshot,
             self._close_edit_menu_and_glass,
-            controller=self.controller) # Pass Controller instance to EditMenu so the same instance is shared
+            controller=self.controller,
+            # --- DPI FIX: pass the scale factor down to EditMenu ---
+            # self.screenshot was captured a few lines up in _on_release,
+            # and it's sized in REAL physical pixels (we multiplied by
+            # dpi_scale to get it). But EditMenu builds its own Tkinter
+            # window, and this whole app is DPI-unaware (see
+            # SetProcessDpiAwareness(0) near the top of this file), which
+            # means every Tkinter size/position it works with is in the
+            # smaller, fake "logical pixel" space, not physical pixels.
+            #
+            # If EditMenu doesn't know the scale factor, it has no way to
+            # tell the difference between those two unit systems, and it
+            # was using the screenshot's physical pixel size directly as a
+            # logical window size. On a monitor at 100% scaling (dpi_scale
+            # == 1) physical and logical pixels are the same number, so
+            # nothing looked wrong. On a scaled laptop display (125%,
+            # 150%, etc.) that mismatch made the edit window balloon up
+            # and spill off the bottom-right of the screen, so you'd only
+            # ever see — and only ever get to save — the top-left sliver
+            # of it. That's the "mega zoomed in" bug.
+            dpi_scale=self.dpi_scale)
         self.edit_menu.attributes("-topmost", True)
         self.edit_menu.focus_force()
 
@@ -494,3 +555,34 @@ class CaptureOverlay:
 
         # resume recording since you're done taking screenshots
         self.controller.resume_recording()
+
+        # --- BUG FIX ---
+        # EL18 version: everything above just tore down the six Tk windows
+        # this overlay owns. But the CaptureOverlay *Python object itself*
+        # is still alive and still sitting in MainSideMenu.screenshot_window
+        # — destroying a Tk window doesn't erase the variable pointing at
+        # its owner. Without this call, MainSideMenu had no way to know
+        # "this overlay is dead, you can make a new one" — which is exactly
+        # why the camera button stopped working after the first close. This
+        # callback is that "I'm dead now" signal.
+        if self.on_closed:
+            self.on_closed()
+
+    def lift(self):
+        """Bring every window this overlay owns back to the front of the stack.
+
+        EL18 version: this didn't exist before. MainSideMenu.on_camera had
+        an `else: self.screenshot_window.lift()` branch meant for "the
+        overlay is already open, just bring it back on top" — but
+        CaptureOverlay (being a plain object, not a Tk widget) never had a
+        lift() method either, so hitting that branch would have thrown the
+        exact same kind of AttributeError as the winfo_exists() bug. This
+        gives that branch something real to call: it just lifts each of
+        the six windows this overlay owns, one by one.
+        """
+        self.border_window.lift()
+        self.selection_box.lift()
+        self.glass_window.lift()
+        self.pop_up.lift()
+        self.close_button.lift()
+        self.close_toggle.lift()

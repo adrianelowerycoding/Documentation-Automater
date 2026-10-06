@@ -302,13 +302,52 @@ class MainSideMenu(ctk.CTkToplevel):
         # the way calling self.withdraw() directly (without updating the flag)
         # would.
         self.toggle_collapse()
-        if self.screenshot_window is None or not self.screenshot_window.winfo_exists():
-            
+
+        # --- BUG FIX: "can't reopen screenshot window after closing it" ---
+        # EL18 version: this used to say
+        #     if self.screenshot_window is None or not self.screenshot_window.winfo_exists():
+        # CaptureOverlay is a plain Python object (not a Tk widget), so it
+        # never had a winfo_exists() method. The FIRST camera click worked
+        # anyway, because `screenshot_window is None` was True and Python's
+        # `or` short-circuits — it never got far enough to call the missing
+        # method. But hitting the red X only destroys CaptureOverlay's
+        # internal Tk windows; it didn't used to clear this
+        # self.screenshot_window reference. So on the SECOND click,
+        # `is None` was now False, Python evaluated the other half, hit
+        # `.winfo_exists()` on an object that never had it, and threw an
+        # AttributeError — right after toggle_collapse() above already ran,
+        # which is why the menu would visibly collapse/expand but no new
+        # screenshot overlay ever appeared.
+        #
+        # The fix (paired with screenshot_window.py): CaptureOverlay now
+        # takes an on_closed callback and fires it at the end of its own
+        # close() method. We hand it _on_screenshot_closed below, which
+        # just resets this reference to None. That means the plain
+        # `is None` check here is now both correct and sufficient — no
+        # method-that-doesn't-exist guessing required.
+        if self.screenshot_window is None:
             self.controller.pause_recording()  # pause the recording while the screenshot overlay is up
             # just passing the same controller one level further down
-            self.screenshot_window = CaptureOverlay(self, controller=self.controller)
+            self.screenshot_window = CaptureOverlay(
+                self,
+                controller=self.controller,
+                on_closed=self._on_screenshot_closed,
+            )
         else:
+            # Overlay is already open (e.g. camera clicked again before
+            # closing the old one) - bring its windows back to front
+            # instead of trying to open a second one on top of it.
             self.screenshot_window.lift()
+
+    def _on_screenshot_closed(self):
+        """Called by CaptureOverlay.close() once it has torn itself down.
+
+        EL18 version: this is the missing piece from the bug above. It's
+        the thing that actually sets self.screenshot_window back to None,
+        so the next camera click correctly sees "nothing is open" instead
+        of hanging on to a dead CaptureOverlay object forever.
+        """
+        self.screenshot_window = None
 
 
 
@@ -402,3 +441,4 @@ def on_dropdown_select(command):
     # (this is the dict value for whatever key the user clicked, e.g. self.on_heading_1)
     print("Custom dropdown selection")
     command()
+
