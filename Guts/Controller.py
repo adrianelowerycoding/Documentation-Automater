@@ -95,15 +95,39 @@ class Controller():
                 self.words = self.transcription.transcribe(audio) # Send audio to be transcribed
             if self.document_creation is None: 
                 # Send both lists to be merged and put into documents
-                self.document_creation = DocumentCreation(self.words, self.button_history)
+                self.document_creation = DocumentCreation(self.words, self.button_history, self.guide_path)
 
             self.document_creation.write_docx()
 
     def clear_session(self):
-        if not self.is_recording: 
-            self.words.clear
-            self.button_history.clear
-            # Clear the screenshots folder also
+        if self.is_recording:
+            return
+
+        # Delete only the screenshots this session saved (they're logged in
+        # button_history), not everything in the folder, so files from other
+        # sessions or put there by the user are left alone.
+        for event in self.button_history:
+            if len(event) == 4 and event[2] == "screenshot":
+                try:
+                    Path(event[3]).unlink(missing_ok=True)
+                except OSError as e:
+                    print(f"Couldn't delete {event[3]}: {e}")
+
+        # Reset all recorded data and state back to a fresh controller
+        self.chunks.clear()
+        self.words.clear()
+        self.button_history.clear()
+        self.clock_start = None
+        self.accumulated = 0.0
+        self.segment_start = None
+        self.heading_on = False
+        self.arrow_on = False
+        self.italic_on = False
+        self.bullet_on = False
+        self.in_sct_mode = False
+        self.sct_counter = 0
+        self.transcription = None
+        self.document_creation = None
 
 
         
@@ -150,7 +174,7 @@ class Controller():
         
         elif self.bullet_on:
             self.block_end()
-            self.italic_on = False
+            self.bullet_on = False
             print(self.button_history)
 
     def on_arrow(self): 
