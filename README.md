@@ -26,8 +26,21 @@ It was also built to pass a corporate IT review. See [Built for Locked-Down Work
 - **Drag-to-capture screenshots**: a full-screen overlay lets you select exactly the region you want. Choose **Save** or **Edit** on release.
 - **Built-in screenshot editor**: draw rectangles and arrows, pick colors, and undo with Revert before saving.
 
+## Built for Locked-Down Workplaces
 
-## Usage
+Designed around the constraints of a corporate IT environment:
+
+- **Only captures what you select**: screenshots are limited to the rectangle you drag. There is no full-screen, background, or scheduled capture.
+- **No keylogging or global hooks**: input comes only from clicks inside the app's own windows. No mouse-element or UI-tree capture (unlike Steps Recorder).
+- **Local transcription**: speech is processed on-device by faster-whisper. Audio is never uploaded, and the app code makes no network calls. The only download is the one-time model fetch on first use.
+- **Visible recording state**: a clear "● Recording / ⏸ Paused / ⏹ Stopped" indicator, plus automatic pause during screenshots.
+- **Small footprint**: project output goes to a folder you choose, and app settings are a single JSON file in `%APPDATA%`. The capture UI is pure Tkinter + Pillow, so it's easy to audit.
+
+## ✍️ Authors
+
+I'm Adrian Lowery ([@adrianelowerycoding](https://github.com/adrianelowerycoding)). I'm an aspiring SWE trying to create both open-source solutions to common automation problems and contribution opportunities to those who need it. 
+
+## 🚀 Usage
 
 Here are the steps you follow to create documentation: 
 
@@ -62,27 +75,7 @@ flowchart TD
     doc --> done((( )))
 ```
 
-## Built for Locked-Down Workplaces
-
-Designed around the constraints of a corporate IT environment:
-
-- **Only captures what you select**: screenshots are limited to the rectangle you drag. There is no full-screen, background, or scheduled capture.
-- **No keylogging or global hooks**: input comes only from clicks inside the app's own windows. No mouse-element or UI-tree capture (unlike Steps Recorder).
-- **Local transcription**: speech is processed on-device by faster-whisper. Audio is never uploaded, and the app code makes no network calls. The only download is the one-time model fetch on first use.
-- **Visible recording state**: a clear "● Recording / ⏸ Paused / ⏹ Stopped" indicator, plus automatic pause during screenshots.
-- **Small footprint**: project output goes to a folder you choose, and app settings are a single JSON file in `%APPDATA%`. The capture UI is pure Tkinter + Pillow, so it's easy to audit.
-
-## Tech Stack
-
-| Area | Tools |
-|---|---|
-| Language | Python 3.12+ |
-| GUI | CustomTkinter, Tkinter, CTkColorPicker, Pillow |
-| Speech-to-text | faster-whisper (CTranslate2), NumPy, sounddevice |
-| Document output | python-docx |
-| Windows integration | `ctypes` (DPI handling), Tk window attributes (alpha / color-key transparency) |
-
-## Getting Started
+## ⬇️ Getting Started
 
 ### Prerequisites
 
@@ -109,43 +102,12 @@ pip install customtkinter CTkColorPicker pillow numpy sounddevice faster-whisper
 python GUI/main.py
 ```
 
-## Project Structure
+## 🧰 Tech Stack
 
-```
-Documentation-Automer-/
-├── Assets/                  # Toolbar icons
-├── GUI/
-│   ├── main.py              # App entry point: window, sidebar, page routing
-│   ├── home_page.py         # Record / pause / stop / save / clear state machine
-│   ├── new_guide_window.py  # Project + guide creation, root-folder prompt
-│   ├── main_side_menu.py    # Floating formatting toolbar
-│   ├── screenshot_window.py # Drag-to-capture overlay (coordinated transparent windows)
-│   ├── edit_menu.py         # Screenshot editor: shapes, color, revert
-│   ├── settings_manager.py  # JSON settings in %APPDATA%
-│   └── ...                  # base page, constants, recording state, settings pages
-├── Guts/
-│   ├── Controller.py        # Audio capture, active-time clock, event log
-│   ├── Transcription.py     # faster-whisper wrapper
-│   └── Document_Creation.py # Event merge → blocks → .docx
-└── Documentation/           # Dev notes: ideas, challenges, to-dos
-```
-
-`GUI/GUI Tests/` and `Guts/Guts Tests/` hold standalone prototypes used to develop individual components.
-
-## Engineering Highlights
-
-- **Windows DPI scaling**: the app runs DPI-unaware for consistent layout, so Tk reports "logical" pixels while screen capture needs physical ones. Capture and editor coordinates are converted between the two, so screenshots are correct on 100%, 125%, and 150% displays.
-- **Transparent overlay stack**: the capture overlay coordinates several borderless windows: a color-keyed border, a near-invisible alpha "glass" layer that is still hit-testable for drag events, a selection box, a save/edit popup, and a close control. Z-order is actively maintained against the OS reshuffling topmost windows.
-- **Event-sourced documents**: rather than editing a document live, everything is logged as timestamped events and rendered once at the end. That keeps recording lightweight and makes pause/resume trivial.
-
-## Roadmap
-
-- [ ] Project profiles and customizable keybinds (settings pages are currently UI scaffolding)
-- [ ] In-app Instructions page
-- [ ] Optional screenshots-folder toggle in New Guide
-- [ ] Screenshot naming tied to the current heading
-- [ ] Text and freehand annotation in the screenshot editor
-
-## Author
-
-Built by [@adrianelowerycoding](https://github.com/adrianelowerycoding).
+| Area | Tools |
+|---|---|
+| Language | Python 3.12+ |
+| GUI | CustomTkinter, Tkinter, CTkColorPicker, Pillow |
+| Speech-to-text | faster-whisper (CTranslate2), NumPy, sounddevice |
+| Document output | python-docx |
+| Windows integration | `ctypes` (DPI handling), Tk window attributes (alpha / color-key transparency) |
