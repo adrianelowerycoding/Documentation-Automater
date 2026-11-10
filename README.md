@@ -27,27 +27,26 @@ It was also built to pass a corporate IT review. See [Built for Locked-Down Work
 - **Built-in screenshot editor**: draw rectangles and arrows, pick colors, and undo with Revert before saving.
 
 
-## How It Works
+## Usage
 
-Two independent event streams share one clock and are merged at save time:
+Here are the steps you follow to create documentation: 
 
 ```mermaid
-flowchart LR
-    Mic[Microphone] --> Ctl["Controller<br/>audio chunks + active-time clock"]
-    UI["Toolbar & screenshot clicks"] --> Log["button_history<br/>(timestamp, kind, value)"]
-    Ctl -- on Save --> W["faster-whisper<br/>(timestamp, 'word', text)"]
-    W --> Merge["Merge by timestamp"]
-    Log --> Merge
-    Merge --> Blocks["Block builder<br/>headings / bullets / italics / screenshots"]
-    Blocks --> Docx["python-docx → Guide.docx"]
+flowchart TD
+    start(( )) --> create["<b>Create a guide</b><br/>name a project and a guide"]
+    create --> record["<b>Click Record</b><br/>the formatting toolbar appears"]
+    record --> voice["<b>Voice is recorded</b><br/>talk through the task as you do it"]
+
+    voice <-.-> anytime["<b>Any time while recording</b><br/>press the formatting buttons<br/>drag-select a screenshot<br/>(auto-pauses, then resumes)"]
+
+    voice --> pauseStop{"Pause or stop?"}
+    pauseStop -- "Pause (press Record)" --> voice
+    pauseStop -- Stop --> saveClear{"Save or clear?"}
+
+    saveClear -- Clear --> discarded(("✕ Session discarded"))
+    saveClear -- Save --> doc["<b>Word document is built</b><br/>Guide.docx, in the order it happened"]
+    doc --> done((( )))
 ```
-
-1. **Capture**: audio is buffered only while recording, and a clock advances only during unpaused time. That keeps Whisper's word timestamps and toolbar-click timestamps on the same timeline, even across pauses and screenshot sessions.
-2. **Transcribe**: on **Save**, the Whisper model is loaded (lazily, so Record stays instant) and returns `(timestamp, "word", text)` tuples.
-3. **Merge**: transcript words and UI events (`heading`, `italic_on/off`, `bullet`, `arrow`, `block_end`, `screenshot`) are sorted into one event list.
-4. **Build**: a state machine using Python's `match` statement groups events into `Block`s, then writes paragraphs, headings, list items, italic runs, and images (capped at 6" × 8") with `python-docx`.
-
-A single `Controller` is created per recording session and passed down through `HomePage → MainSideMenu → CaptureOverlay → EditMenu`, so every action lands in the same event log.
 
 ## Built for Locked-Down Workplaces
 
