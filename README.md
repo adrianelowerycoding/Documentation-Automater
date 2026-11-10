@@ -17,7 +17,7 @@ Documentation Automater is my free take on solving one of the most annoying, tim
 
 **Documentation Automater** removes most of the friction for document creation. Work through your task as you normally would, narrating out loud, formatting text with a small toolbar, and drag-selecting screenshots as you go. When you hit **Stop** and **Save**, everything you said, formatted, and captured is assembled into a `.docx` in the exact order it happened. It works for **desktop and browser applications** alike, and in my own workflow it cuts documentation time by roughly 10x.
 
-It was also built to pass a corporate IT review. See [Built for Locked-Down Workplaces](#built-for-locked-down-workplaces).
+It was also built with corporate IT policies in mind. See what features I've included: [Built for Locked-Down Workplaces](#built-for-locked-down-workplaces).
 
 ## 🌟 Highlights
 
