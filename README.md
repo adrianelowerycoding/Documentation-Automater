@@ -26,7 +26,7 @@ It was also built with corporate IT policies in mind. See what features I've inc
 - **Drag-to-capture screenshots**: a full-screen overlay lets you select exactly the region you want. Choose **Save** or **Edit** on release.
 - **Built-in screenshot editor**: draw rectangles and arrows, pick colors, and undo with Revert before saving.
 
-## Built for Locked-Down Workplaces
+## 🔒 Built for Locked-Down Workplaces
 
 Designed around the constraints of a corporate IT environment:
 
