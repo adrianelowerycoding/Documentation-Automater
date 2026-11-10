@@ -13,9 +13,9 @@
 
 ## About
 
-Writing SOPs and technical documentation by hand is slow: perform the task, screenshot every step, type up what happened, then format everything afterward. Browser-based tools like Scribe don't cover desktop applications, and most are paid.
+Documentation Automater is my free take on solving one of the most annoying, time-consuming tasks: Creating process documentation. I've spent countless hours making huge documents by hand: perform the task, screenshot every step, type up what happened, then format everything afterward. Tools like Scribe do a great job of tackling this issue, but it only works on the browser, and it's paid.
 
-**Documentation Automater** removes the "afterward." Work through your task as you normally would, narrating out loud, formatting text with a small toolbar, and drag-selecting screenshots as you go. When you hit **Stop** and **Save**, everything you said, formatted, and captured is assembled into a `.docx` in the exact order it happened. It works for **desktop and browser applications** alike, and in my own workflow it cuts documentation time by roughly 10x.
+**Documentation Automater** removes most of the friction for document creation. Work through your task as you normally would, narrating out loud, formatting text with a small toolbar, and drag-selecting screenshots as you go. When you hit **Stop** and **Save**, everything you said, formatted, and captured is assembled into a `.docx` in the exact order it happened. It works for **desktop and browser applications** alike, and in my own workflow it cuts documentation time by roughly 10x.
 
 It was also built to pass a corporate IT review. See [Built for Locked-Down Workplaces](#built-for-locked-down-workplaces).
 
