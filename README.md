@@ -21,7 +21,7 @@ It was also built to pass a corporate IT review. See [Built for Locked-Down Work
 
 ## 🌟 Highlights
 
-- **Voice-to-document**: speech is transcribed locally with [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (`small.en`, CPU) with per-word timestamps.
+- **Voice-to-document**: speech is transcribed locally with [faster-whisper](https://github.com/SYSTRAN/faster-whisper) with per-word timestamps.
 - **Live formatting toolbar**: a floating, collapsible, always-on-top bar for headings (H1-H4), italics, bullet/numbered lists, and inline arrows (→).
 - **Drag-to-capture screenshots**: a full-screen overlay lets you select exactly the region you want. Choose **Save** or **Edit** on release.
 - **Built-in screenshot editor**: draw rectangles and arrows, pick colors, and undo with Revert before saving.
