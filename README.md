@@ -1,6 +1,6 @@
 # Documentation Automater
 
-**Turn a task walkthrough into a finished Word document. Just do the task and talk.**
+**Speed up document/SOP creation by 10x. Walkthrough a process, talk, screenshot, and edit text with on the go and turn it all into a finished Word document.**
 
 ![Python](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white)
