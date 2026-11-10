@@ -11,7 +11,7 @@
 ![Demo](docs/demo.gif)
 -->
 
-## About
+## ℹ️ About
 
 Documentation Automater is my free take on solving one of the most annoying, time-consuming tasks: Creating process documentation. I've spent countless hours making huge documents by hand: perform the task, screenshot every step, type up what happened, then format everything afterward. Tools like Scribe do a great job of tackling this issue, but it only works on the browser, and it's paid.
 
@@ -19,16 +19,13 @@ Documentation Automater is my free take on solving one of the most annoying, tim
 
 It was also built to pass a corporate IT review. See [Built for Locked-Down Workplaces](#built-for-locked-down-workplaces).
 
-## Features
+## 🌟 Highlights
 
 - **Voice-to-document**: speech is transcribed locally with [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (`small.en`, CPU) with per-word timestamps.
 - **Live formatting toolbar**: a floating, collapsible, always-on-top bar for headings (H1-H4), italics, bullet/numbered lists, and inline arrows (→).
 - **Drag-to-capture screenshots**: a full-screen overlay lets you select exactly the region you want. Choose **Save** or **Edit** on release.
 - **Built-in screenshot editor**: draw rectangles and arrows, pick colors, and undo with Revert before saving.
-- **Chronological output**: words, formatting, and screenshots land in the document in the order they were captured.
-- **Smart pause**: recording pauses automatically while you take a screenshot and resumes when you close the overlay.
-- **Project/guide organization**: guides live in `Projects/<Project>/<Guide>/`, each with its own `screenshots/` folder and `<Guide>.docx`.
-- **Recording state machine**: Record / Pause / Stop / Save / Clear with clear on-screen status; follows system light/dark theme.
+
 
 ## How It Works
 
