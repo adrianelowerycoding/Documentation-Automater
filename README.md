@@ -31,6 +31,20 @@ It was also built to pass a corporate IT review. See [Built for Locked-Down Work
 
 Here are the steps you follow to create documentation: 
 
+1. **New Guide**: on first run, choose a root folder for your projects. Then create or load a **Project** and name your **Guide**.
+2. **● Record**: the formatting toolbar docks to the right edge of your screen. Start doing your task and talking through it.
+3. **Format as you go** with the toolbar:
+   | Button | Action |
+   |---|---|
+   | Heading | Start/end an H1-H4 heading (click again to end) |
+   | Italics | Toggle italic text |
+   | Bullet | Start/end a bullet or numbered list |
+   | → | Insert an arrow |
+   | Camera | Open the screenshot overlay |
+4. **Screenshot**: drag over the area you want, then **Save**, or **Edit** to annotate with shapes and colors first. Close the overlay with the red ✕ to resume recording.
+5. **⏸ Pause** any time; press **●** to resume.
+6. **⏹ Stop**, then **Save**. Your document appears at `Projects/<Project>/<Guide>/<Guide>.docx`.
+
 ```mermaid
 flowchart TD
     start(( )) --> create["<b>Create a guide</b><br/>name a project and a guide"]
@@ -94,22 +108,6 @@ pip install customtkinter CTkColorPicker pillow numpy sounddevice faster-whisper
 ```powershell
 python GUI/main.py
 ```
-
-## Usage
-
-1. **New Guide**: on first run, choose a root folder for your projects. Then create or load a **Project** and name your **Guide**.
-2. **● Record**: the formatting toolbar docks to the right edge of your screen. Start doing your task and talking through it.
-3. **Format as you go** with the toolbar:
-   | Button | Action |
-   |---|---|
-   | Heading | Start/end an H1-H4 heading (click again to end) |
-   | Italics | Toggle italic text |
-   | Bullet | Start/end a bullet or numbered list |
-   | → | Insert an arrow |
-   | Camera | Open the screenshot overlay |
-4. **Screenshot**: drag over the area you want, then **Save**, or **Edit** to annotate with shapes and colors first. Close the overlay with the red ✕ to resume recording.
-5. **⏸ Pause** any time; press **●** to resume.
-6. **⏹ Stop**, then **Save**. Your document appears at `Projects/<Project>/<Guide>/<Guide>.docx`.
 
 ## Project Structure
 
