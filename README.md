@@ -19,6 +19,10 @@ Documentation Automater is my free take on solving one of the most annoying, tim
 
 It was also built with corporate IT policies in mind. See what features I've included: [Built for Locked-Down Workplaces](#built-for-locked-down-workplaces).
 
+
+https://github.com/user-attachments/assets/4bc7da7a-4917-44ad-ba46-6d4263fe7d25
+
+
 ## 🌟 Highlights
 
 - **Voice-to-document**: speech is transcribed locally with [faster-whisper](https://github.com/SYSTRAN/faster-whisper) with per-word timestamps.
